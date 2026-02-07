@@ -1,0 +1,2 @@
+# Python dependencies for VK API Tester
+requests>=2.31.0

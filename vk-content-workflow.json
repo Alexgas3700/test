@@ -1,0 +1,424 @@
+{
+  "name": "VK Content Creation Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/wall.post",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.vkAccessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            },
+            {
+              "name": "owner_id",
+              "value": "={{ $json.owner_id }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "attachments",
+              "value": "={{ $json.attachments }}"
+            },
+            {
+              "name": "from_group",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "vk-post-content",
+      "name": "VK Post Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1060,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate content for VK post\nconst contentTemplates = [\n  \"🚀 Новый день - новые возможности! #мотивация #успех\",\n  \"💡 Совет дня: Начните с малого, но начните сегодня! #советы #развитие\",\n  \"🌟 Делитесь своими достижениями в комментариях! #сообщество #общение\",\n  \"📚 Узнайте что-то новое каждый день! #обучение #знания\",\n  \"🎯 Ставьте цели и достигайте их! #цели #мотивация\"\n];\n\nconst randomIndex = Math.floor(Math.random() * contentTemplates.length);\nconst message = contentTemplates[randomIndex];\n\n// You can customize these values\nconst owner_id = \"-YOUR_GROUP_ID\"; // Replace with your VK group ID (negative for groups)\nconst attachments = \"\"; // Add photo/video attachments if needed\n\nreturn {\n  json: {\n    owner_id: owner_id,\n    message: message,\n    attachments: attachments,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "generate-content",
+      "name": "Generate Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.response?.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "vk_posts_log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "post_id": "={{ $json.response?.post_id }}",
+            "message": "={{ $json.message }}",
+            "status": "success",
+            "timestamp": "={{ $json.timestamp }}",
+            "owner_id": "={{ $json.owner_id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-success",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1500,
+        200
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "vk_posts_log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "message": "={{ $json.message }}",
+            "status": "failed",
+            "error": "={{ $json.response?.error }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "owner_id": "={{ $json.owner_id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1500,
+        400
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/photos.getWallUploadServer",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.vkAccessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            },
+            {
+              "name": "group_id",
+              "value": "={{ $json.group_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-upload-server",
+      "name": "Get Upload Server",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        500
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate content before posting\nconst message = $json.message;\nconst owner_id = $json.owner_id;\n\n// Validation rules\nconst errors = [];\n\nif (!message || message.trim().length === 0) {\n  errors.push(\"Message cannot be empty\");\n}\n\nif (message.length > 4096) {\n  errors.push(\"Message exceeds maximum length of 4096 characters\");\n}\n\nif (!owner_id) {\n  errors.push(\"Owner ID is required\");\n}\n\nif (errors.length > 0) {\n  return {\n    json: {\n      valid: false,\n      errors: errors,\n      original_data: $json\n    }\n  };\n}\n\nreturn {\n  json: {\n    valid: true,\n    ...($json)\n  }\n};"
+      },
+      "id": "validate-content",
+      "name": "Validate Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-validation",
+      "name": "Check Validation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle validation errors\nconst errors = $json.errors || [];\nconst errorMessage = errors.join(\", \");\n\nconsole.error(\"Validation failed:\", errorMessage);\n\nreturn {\n  json: {\n    status: \"validation_failed\",\n    errors: errors,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "handle-validation-error",
+      "name": "Handle Validation Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/wall.getById",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.vkAccessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            },
+            {
+              "name": "posts",
+              "value": "={{ $json.response?.post_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-post-stats",
+      "name": "Get Post Stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1720,
+        200
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "=📊 VK Post Statistics Report\n\nPost ID: {{ $json.response?.post_id }}\nMessage: {{ $json.message }}\nStatus: {{ $json.status }}\nTimestamp: {{ $json.timestamp }}\n\n{{ $json.response?.error ? 'Error: ' + $json.response.error : 'Posted successfully!' }}",
+        "options": {}
+      },
+      "id": "send-notification",
+      "name": "Send Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1720,
+        300
+      ],
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Generate Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Content": {
+      "main": [
+        [
+          {
+            "node": "Validate Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Content": {
+      "main": [
+        [
+          {
+            "node": "Check Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Validation": {
+      "main": [
+        [
+          {
+            "node": "VK Post Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VK Post Content": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": [
+        [
+          {
+            "node": "Get Post Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Post Stats": {
+      "main": [
+        [
+          {
+            "node": "Send Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-02-07T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,63 @@
+{
+  "vk_config": {
+    "api_version": "5.131",
+    "access_token": "YOUR_VK_ACCESS_TOKEN_HERE",
+    "owner_id": "-YOUR_GROUP_ID_HERE",
+    "from_group": 1,
+    "publish_settings": {
+      "signed": 0,
+      "mark_as_ads": 0,
+      "close_comments": 0,
+      "mute_notifications": 0
+    }
+  },
+  "content_settings": {
+    "max_message_length": 4096,
+    "default_hashtags": [
+      "#автопост",
+      "#контент"
+    ],
+    "content_templates": [
+      "🚀 Новый день - новые возможности! #мотивация #успех",
+      "💡 Совет дня: Начните с малого, но начните сегодня! #советы #развитие",
+      "🌟 Делитесь своими достижениями в комментариях! #сообщество #общение",
+      "📚 Узнайте что-то новое каждый день! #обучение #знания",
+      "🎯 Ставьте цели и достигайте их! #цели #мотивация"
+    ]
+  },
+  "schedule_settings": {
+    "enabled": true,
+    "interval_type": "hours",
+    "interval_value": 6,
+    "timezone": "Europe/Moscow"
+  },
+  "logging_settings": {
+    "enabled": true,
+    "log_to_database": false,
+    "log_to_file": true,
+    "log_file_path": "./logs/vk_posts.log"
+  },
+  "notification_settings": {
+    "enabled": false,
+    "notification_type": "email",
+    "email": {
+      "to": "your-email@example.com",
+      "subject": "VK Post Status Report"
+    },
+    "telegram": {
+      "bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
+      "chat_id": "YOUR_TELEGRAM_CHAT_ID"
+    }
+  },
+  "error_handling": {
+    "retry_on_error": true,
+    "max_retries": 3,
+    "retry_delay_seconds": 60,
+    "notify_on_error": true
+  },
+  "rate_limiting": {
+    "enabled": true,
+    "requests_per_second": 3,
+    "delay_between_requests_ms": 334
+  }
+}
