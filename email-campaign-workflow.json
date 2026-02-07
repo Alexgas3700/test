@@ -1,0 +1,688 @@
+{
+  "name": "Email Campaign Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c5f7e8d9-1234-4567-89ab-cdef01234567",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.webhookUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "event",
+              "value": "start_campaign"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+      "name": "Webhook Trigger (Alternative)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [240, 500],
+      "disabled": true,
+      "notes": "Enable this for webhook-based triggers"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "b2c3d4e5-6789-01ab-cdef-234567890abc",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 700],
+      "disabled": true,
+      "notes": "Enable for scheduled campaigns (default: every Monday at 9 AM)"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "d4e5f6a7-8901-23ab-cdef-456789012345",
+      "name": "Get Recipients from Database",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 300],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "PostgreSQL account"
+        }
+      },
+      "disabled": true,
+      "notes": "Configure with your database credentials"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.apiUrl || 'https://api.example.com/recipients' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "e5f6a7b8-9012-34ab-cdef-567890123456",
+      "name": "Get Recipients from API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 500],
+      "disabled": true,
+      "notes": "Alternative: Fetch recipients from external API"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sample recipient data for testing\nconst recipients = [\n  {\n    email: 'user1@example.com',\n    firstName: 'John',\n    lastName: 'Doe',\n    language: 'en',\n    segment: 'premium',\n    subscribed: true\n  },\n  {\n    email: 'user2@example.com',\n    firstName: 'Jane',\n    lastName: 'Smith',\n    language: 'ru',\n    segment: 'standard',\n    subscribed: true\n  },\n  {\n    email: 'user3@example.com',\n    firstName: 'Alice',\n    lastName: 'Johnson',\n    language: 'en',\n    segment: 'premium',\n    subscribed: true\n  }\n];\n\nreturn recipients.map(recipient => ({ json: recipient }));"
+      },
+      "id": "f6a7b8c9-0123-45ab-cdef-678901234567",
+      "name": "Sample Recipients Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 700],
+      "notes": "Replace with actual data source"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+              "leftValue": "={{ $json.subscribed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "b2c3d4e5-6789-01ab-cdef-234567890abc",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a7b8c9d0-1234-56ab-cdef-789012345678",
+      "name": "Filter Active Subscribers",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [680, 500],
+      "notes": "Only send to subscribed users with valid emails"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c3d4e5f6-7890-12ab-cdef-345678901234",
+              "name": "fullName",
+              "value": "={{ $json.firstName }} {{ $json.lastName }}",
+              "type": "string"
+            },
+            {
+              "id": "d4e5f6a7-8901-23ab-cdef-456789012345",
+              "name": "unsubscribeLink",
+              "value": "=https://example.com/unsubscribe?email={{ $json.email }}&token={{ $json.email.hashCode() }}",
+              "type": "string"
+            },
+            {
+              "id": "e5f6a7b8-9012-34ab-cdef-567890123456",
+              "name": "trackingPixel",
+              "value": "=https://example.com/track/open?email={{ $json.email }}&campaign_id={{ $now.toUnixInteger() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b8c9d0e1-2345-67ab-cdef-890123456789",
+      "name": "Prepare Email Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [900, 500],
+      "notes": "Add personalization and tracking data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "f6a7b8c9-0123-45ab-cdef-678901234567",
+              "leftValue": "={{ $json.language }}",
+              "rightValue": "ru",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c9d0e1f2-3456-78ab-cdef-901234567890",
+      "name": "Split by Language",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1120, 500],
+      "notes": "Route to different email templates based on language"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+              "name": "subject",
+              "value": "Special Offer Just for You, {{ $json.firstName }}!",
+              "type": "string"
+            },
+            {
+              "id": "b2c3d4e5-6789-01ab-cdef-234567890abc",
+              "name": "htmlBody",
+              "value": "=<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Email Campaign</title>\n</head>\n<body style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;\">\n  <div style=\"background-color: #f8f9fa; padding: 20px; border-radius: 10px;\">\n    <h1 style=\"color: #007bff;\">Hello, {{ $json.fullName }}!</h1>\n    <p>We have an exclusive offer just for you as a valued {{ $json.segment }} member.</p>\n    <div style=\"background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0;\">\n      <h2>Your Special Offer</h2>\n      <p>Get 20% off on your next purchase!</p>\n      <a href=\"https://example.com/offer?email={{ $json.email }}\" style=\"display: inline-block; background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin-top: 10px;\">Claim Your Offer</a>\n    </div>\n    <p style=\"font-size: 12px; color: #666; margin-top: 30px;\">\n      If you no longer wish to receive these emails, you can <a href=\"{{ $json.unsubscribeLink }}\" style=\"color: #007bff;\">unsubscribe here</a>.\n    </p>\n  </div>\n  <img src=\"{{ $json.trackingPixel }}\" width=\"1\" height=\"1\" alt=\"\" style=\"display:none;\" />\n</body>\n</html>",
+              "type": "string"
+            },
+            {
+              "id": "c3d4e5f6-7890-12ab-cdef-345678901234",
+              "name": "textBody",
+              "value": "=Hello, {{ $json.fullName }}!\n\nWe have an exclusive offer just for you as a valued {{ $json.segment }} member.\n\nYour Special Offer:\nGet 20% off on your next purchase!\n\nClaim your offer: https://example.com/offer?email={{ $json.email }}\n\nIf you no longer wish to receive these emails, you can unsubscribe here: {{ $json.unsubscribeLink }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0e1f2a3-4567-89ab-cdef-012345678901",
+      "name": "English Email Template",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [1340, 400],
+      "notes": "English version of the email"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d4e5f6a7-8901-23ab-cdef-456789012345",
+              "name": "subject",
+              "value": "Специальное предложение для вас, {{ $json.firstName }}!",
+              "type": "string"
+            },
+            {
+              "id": "e5f6a7b8-9012-34ab-cdef-567890123456",
+              "name": "htmlBody",
+              "value": "=<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Email Campaign</title>\n</head>\n<body style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;\">\n  <div style=\"background-color: #f8f9fa; padding: 20px; border-radius: 10px;\">\n    <h1 style=\"color: #007bff;\">Здравствуйте, {{ $json.fullName }}!</h1>\n    <p>У нас есть эксклюзивное предложение специально для вас как ценного {{ $json.segment }} участника.</p>\n    <div style=\"background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0;\">\n      <h2>Ваше специальное предложение</h2>\n      <p>Получите скидку 20% на следующую покупку!</p>\n      <a href=\"https://example.com/offer?email={{ $json.email }}\" style=\"display: inline-block; background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin-top: 10px;\">Получить предложение</a>\n    </div>\n    <p style=\"font-size: 12px; color: #666; margin-top: 30px;\">\n      Если вы больше не хотите получать эти письма, вы можете <a href=\"{{ $json.unsubscribeLink }}\" style=\"color: #007bff;\">отписаться здесь</a>.\n    </p>\n  </div>\n  <img src=\"{{ $json.trackingPixel }}\" width=\"1\" height=\"1\" alt=\"\" style=\"display:none;\" />\n</body>\n</html>",
+              "type": "string"
+            },
+            {
+              "id": "f6a7b8c9-0123-45ab-cdef-678901234567",
+              "name": "textBody",
+              "value": "=Здравствуйте, {{ $json.fullName }}!\n\nУ нас есть эксклюзивное предложение специально для вас как ценного {{ $json.segment }} участника.\n\nВаше специальное предложение:\nПолучите скидку 20% на следующую покупку!\n\nПолучить предложение: https://example.com/offer?email={{ $json.email }}\n\nЕсли вы больше не хотите получать эти письма, вы можете отписаться здесь: {{ $json.unsubscribeLink }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e1f2a3b4-5678-90ab-cdef-123456789012",
+      "name": "Russian Email Template",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [1340, 600],
+      "notes": "Russian version of the email"
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@example.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.htmlBody }}",
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "id": "f2a3b4c5-6789-01ab-cdef-234567890123",
+      "name": "Send via SMTP",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1560, 400],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP account"
+        }
+      },
+      "disabled": true,
+      "notes": "Configure SMTP credentials"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "message": {
+          "to": "={{ $json.email }}",
+          "subject": "={{ $json.subject }}",
+          "bodyContent": "={{ $json.htmlBody }}",
+          "bodyContentType": "html"
+        },
+        "options": {}
+      },
+      "id": "a3b4c5d6-7890-12ab-cdef-345678901234",
+      "name": "Send via Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1560, 500],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1",
+          "name": "Gmail account"
+        }
+      },
+      "disabled": true,
+      "notes": "Alternative: Use Gmail API"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "fromEmail": "noreply@example.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.htmlBody }}",
+        "options": {}
+      },
+      "id": "b4c5d6e7-8901-23ab-cdef-456789012345",
+      "name": "Send via SendGrid",
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [1560, 600],
+      "credentials": {
+        "sendGridApi": {
+          "id": "1",
+          "name": "SendGrid account"
+        }
+      },
+      "disabled": true,
+      "notes": "Alternative: Use SendGrid"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mailgun.net/v3/YOUR_DOMAIN/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "noreply@example.com"
+            },
+            {
+              "name": "to",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $json.subject }}"
+            },
+            {
+              "name": "html",
+              "value": "={{ $json.htmlBody }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.textBody }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c5d6e7f8-9012-34ab-cdef-567890123456",
+      "name": "Send via Mailgun",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 700],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "1",
+          "name": "Mailgun API"
+        }
+      },
+      "disabled": true,
+      "notes": "Alternative: Use Mailgun"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log successful email send\nconst logEntry = {\n  timestamp: new Date().toISOString(),\n  email: $input.item.json.email,\n  subject: $input.item.json.subject,\n  status: 'sent',\n  campaign_id: $input.item.json.campaign_id || 'default'\n};\n\nconsole.log('Email sent:', logEntry);\n\nreturn { json: logEntry };"
+      },
+      "id": "d6e7f8a9-0123-45ab-cdef-678901234567",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 500],
+      "notes": "Track successful sends"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "email_logs",
+          "mode": "list",
+          "cachedResultName": "email_logs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.email }}",
+            "subject": "={{ $json.subject }}",
+            "status": "={{ $json.status }}",
+            "sent_at": "={{ $json.timestamp }}",
+            "campaign_id": "={{ $json.campaign_id }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "e7f8a9b0-1234-56ab-cdef-789012345678",
+      "name": "Save to Database",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2000, 500],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "PostgreSQL account"
+        }
+      },
+      "disabled": true,
+      "notes": "Optional: Store logs in database"
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "id": "f8a9b0c1-2345-67ab-cdef-890123456789",
+      "name": "Rate Limit Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1340, 800],
+      "webhookId": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+      "disabled": true,
+      "notes": "Enable to add delay between emails (rate limiting)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// A/B Testing Logic\nconst variants = ['A', 'B'];\nconst randomVariant = variants[Math.floor(Math.random() * variants.length)];\n\nreturn {\n  json: {\n    ...($input.item.json),\n    variant: randomVariant,\n    testGroup: randomVariant === 'A' ? 'control' : 'experiment'\n  }\n};"
+      },
+      "id": "a9b0c1d2-3456-78ab-cdef-901234567890",
+      "name": "A/B Test Split",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 700],
+      "disabled": true,
+      "notes": "Enable for A/B testing campaigns"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Failed to send email to {{ $json.email }}: {{ $json.error }}"
+      },
+      "id": "b0c1d2e3-4567-89ab-cdef-012345678901",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [1780, 700],
+      "notes": "Handle sending errors"
+    }
+  ],
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Sample Recipients Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sample Recipients Data": {
+      "main": [
+        [
+          {
+            "node": "Filter Active Subscribers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recipients from Database": {
+      "main": [
+        [
+          {
+            "node": "Filter Active Subscribers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recipients from API": {
+      "main": [
+        [
+          {
+            "node": "Filter Active Subscribers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Active Subscribers": {
+      "main": [
+        [
+          {
+            "node": "Prepare Email Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Email Data": {
+      "main": [
+        [
+          {
+            "node": "Split by Language",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split by Language": {
+      "main": [
+        [
+          {
+            "node": "Russian Email Template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "English Email Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "English Email Template": {
+      "main": [
+        [
+          {
+            "node": "Send via SMTP",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send via Gmail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send via SendGrid",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send via Mailgun",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Russian Email Template": {
+      "main": [
+        [
+          {
+            "node": "Send via SMTP",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send via Gmail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send via SendGrid",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send via Mailgun",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via SMTP": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via Gmail": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via SendGrid": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via Mailgun": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": [
+        [
+          {
+            "node": "Save to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-07T00:00:00.000Z",
+  "versionId": "1"
+}
