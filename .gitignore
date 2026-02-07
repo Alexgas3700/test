@@ -1,0 +1,69 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# n8n data
+.n8n/
+workflows/
+credentials/
+
+# Database
+*.sql
+*.sql.gz
+database/backups/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker volumes
+volumes/
+postgres_data/
+n8n_data/
+redis_data/
+pgadmin_data/
+
+# Backups
+backups/
+*.backup
+
+# SSL certificates
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Node modules
+node_modules/
+npm-debug.log
+yarn.lock
+package-lock.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test files
+test-results/
+coverage/
+
+# Build artifacts
+dist/
+build/

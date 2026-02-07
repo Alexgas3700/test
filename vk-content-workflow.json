@@ -1,0 +1,342 @@
+{
+  "name": "VK Content Creation Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "create-vk-post",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        500
+      ],
+      "webhookId": "vk-content-webhook"
+    },
+    {
+      "parameters": {
+        "content": "## VK Content Creation Workflow\n\nThis workflow can be triggered:\n1. By schedule (every 2 hours)\n2. Via webhook POST to /create-vk-post\n\n### Webhook Payload Example:\n```json\n{\n  \"message\": \"Your post text here\",\n  \"attachments\": [\"photo123_456\"],\n  \"publish_date\": \"2026-02-07T12:00:00\",\n  \"from_group\": 1\n}\n```",
+        "height": 464,
+        "width": 567
+      },
+      "id": "sticky-note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-content",
+      "name": "Check Content",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        460,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process and prepare VK post data\nconst inputData = $input.all();\nconst processedItems = [];\n\nfor (const item of inputData) {\n  const data = item.json;\n  \n  // Default values\n  const postData = {\n    message: data.message || '',\n    attachments: data.attachments || [],\n    from_group: data.from_group || 1,\n    publish_date: data.publish_date || null,\n    lat: data.lat || null,\n    long: data.long || null,\n    place_id: data.place_id || null,\n    post_id: data.post_id || null,\n    guid: data.guid || Date.now().toString(),\n    mark_as_ads: data.mark_as_ads || 0,\n    close_comments: data.close_comments || 0,\n    mute_notifications: data.mute_notifications || 0,\n    copyright: data.copyright || null\n  };\n  \n  // Add hashtags if provided\n  if (data.hashtags && Array.isArray(data.hashtags)) {\n    postData.message += '\\n\\n' + data.hashtags.map(tag => `#${tag}`).join(' ');\n  }\n  \n  // Format publish date if provided\n  if (postData.publish_date) {\n    const date = new Date(postData.publish_date);\n    postData.publish_date = Math.floor(date.getTime() / 1000);\n  }\n  \n  processedItems.push({\n    json: postData,\n    pairedItem: item.pairedItem\n  });\n}\n\nreturn processedItems;"
+      },
+      "id": "process-data",
+      "name": "Process Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "post",
+        "operation": "create",
+        "owner": "={{ $json.owner_id }}",
+        "message": "={{ $json.message }}",
+        "additionalFields": {
+          "attachments": "={{ $json.attachments.join(',') }}",
+          "from_group": "={{ $json.from_group }}",
+          "publish_date": "={{ $json.publish_date }}",
+          "lat": "={{ $json.lat }}",
+          "long": "={{ $json.long }}",
+          "place_id": "={{ $json.place_id }}",
+          "post_id": "={{ $json.post_id }}",
+          "guid": "={{ $json.guid }}",
+          "mark_as_ads": "={{ $json.mark_as_ads }}",
+          "close_comments": "={{ $json.close_comments }}",
+          "mute_notifications": "={{ $json.mute_notifications }}"
+        }
+      },
+      "id": "vk-post",
+      "name": "Create VK Post",
+      "type": "n8n-nodes-base.vk",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "vkOAuth2Api": {
+          "id": "1",
+          "name": "VK OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO vk_posts (post_id, message, created_at, status) VALUES ({{ $json.post_id }}, '{{ $json.message }}', NOW(), 'published')",
+        "options": {}
+      },
+      "id": "log-to-db",
+      "name": "Log to Database",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "2",
+          "name": "PostgreSQL"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.webhook_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "success"
+            },
+            {
+              "name": "post_id",
+              "value": "={{ $json.post_id }}"
+            },
+            {
+              "name": "message",
+              "value": "Post published successfully"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-success",
+      "name": "Notify Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1120,
+        180
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Error Handler\n\nCatches errors and sends notifications",
+        "height": 233,
+        "width": 240
+      },
+      "id": "error-note",
+      "name": "Error Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        600,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.error_webhook_url }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "error"
+            },
+            {
+              "name": "error",
+              "value": "={{ $json.error }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $now }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-error",
+      "name": "Notify Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        500
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error-msg",
+              "name": "error",
+              "value": "Content validation failed: message is empty",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-error",
+      "name": "Set Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        680,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Content": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Data": {
+      "main": [
+        [
+          {
+            "node": "Create VK Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create VK Post": {
+      "main": [
+        [
+          {
+            "node": "Log to Database",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error": {
+      "main": [
+        [
+          {
+            "node": "Notify Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-07T00:00:00.000Z",
+  "versionId": "1"
+}
