@@ -1,0 +1,78 @@
+{
+  "telegram": {
+    "botToken": "YOUR_BOT_TOKEN_HERE",
+    "channelId": "@your_channel_name",
+    "adminChatId": "YOUR_ADMIN_CHAT_ID",
+    "parseMode": "Markdown",
+    "disableWebPagePreview": false
+  },
+  "rss": {
+    "feeds": [
+      {
+        "name": "Основная новостная лента",
+        "url": "https://example.com/rss",
+        "enabled": true,
+        "maxAge": 24
+      },
+      {
+        "name": "Дополнительная лента",
+        "url": "https://another-example.com/feed",
+        "enabled": false,
+        "maxAge": 12
+      }
+    ],
+    "rss2jsonApiKey": "YOUR_RSS2JSON_API_KEY"
+  },
+  "schedule": {
+    "cronExpression": "0 9,12,18 * * *",
+    "timezone": "Europe/Moscow",
+    "enabled": true
+  },
+  "posting": {
+    "delayBetweenPosts": 5,
+    "maxPostsPerRun": 10,
+    "filterDuplicates": true
+  },
+  "messages": {
+    "dailyGreeting": {
+      "enabled": true,
+      "time": "09:00",
+      "template": "📢 Доброе утро! Сегодня {{ date }}\n\n{{ message }}"
+    },
+    "postTemplate": "## 📰 {{ title }}\n\n{{ description }}\n\n🔗 [Читать полностью]({{ link }})\n\n{{ hashtags }}"
+  },
+  "hashtags": [
+    "#новости",
+    "#telegram",
+    "#автоматизация"
+  ],
+  "webhook": {
+    "enabled": true,
+    "path": "/webhook/telegram-webhook",
+    "authentication": {
+      "enabled": false,
+      "type": "bearer",
+      "token": "YOUR_WEBHOOK_SECRET_TOKEN"
+    }
+  },
+  "notifications": {
+    "errorNotifications": true,
+    "successNotifications": false,
+    "dailyReport": true,
+    "reportTime": "20:00"
+  },
+  "filters": {
+    "keywords": {
+      "include": [],
+      "exclude": ["реклама", "спам"]
+    },
+    "minContentLength": 50,
+    "maxContentLength": 4000
+  },
+  "advanced": {
+    "retryOnError": true,
+    "maxRetries": 3,
+    "retryDelay": 5,
+    "logLevel": "info"
+  }
+}
