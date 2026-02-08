@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-telegram
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Основные настройки
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=change_this_password
+      
+      # Webhook настройки
+      - N8N_HOST=your-domain.com
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://your-domain.com/
+      
+      # Часовой пояс
+      - GENERIC_TIMEZONE=Europe/Moscow
+      - TZ=Europe/Moscow
+      
+      # Telegram настройки (опционально, можно использовать в workflow)
+      - TELEGRAM_BOT_TOKEN=your-bot-token-here
+      - TELEGRAM_CHAT_ID=-1001234567890
+      - TELEGRAM_API_KEY=your-secret-api-key
+      
+      # Дополнительные настройки
+      - N8N_LOG_LEVEL=info
+      - N8N_METRICS=true
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+      
+    volumes:
+      # Персистентное хранилище для данных n8n
+      - n8n_data:/home/node/.n8n
+      
+      # Монтирование workflow файлов (опционально)
+      - ./telegram_group_posting_workflow.json:/home/node/.n8n/workflows/telegram_basic.json
+      - ./telegram_scheduled_posting_workflow.json:/home/node/.n8n/workflows/telegram_scheduled.json
+      - ./telegram_webhook_posting_workflow.json:/home/node/.n8n/workflows/telegram_webhook.json
+    
+    networks:
+      - n8n-network
+    
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Опционально: PostgreSQL для production
+  postgres:
+    image: postgres:15-alpine
+    container_name: n8n-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=n8n_password
+      - POSTGRES_DB=n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - n8n-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Опционально: Redis для очередей
+  redis:
+    image: redis:7-alpine
+    container_name: n8n-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - n8n-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Опционально: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: n8n-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - n8n-network
+    depends_on:
+      - n8n
+
+volumes:
+  n8n_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  n8n-network:
+    driver: bridge

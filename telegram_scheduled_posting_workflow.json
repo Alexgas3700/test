@@ -1,0 +1,151 @@
+{
+  "name": "Telegram Scheduled Group Posting",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "d4e5f6a7-b8c9-0123-def0-234567890123",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "notes": "Runs daily at 9:00 AM. Adjust cron expression as needed."
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": false,
+          "disable_notification": false
+        }
+      },
+      "id": "e5f6a7b8-c9d0-1234-ef01-345678901234",
+      "name": "Send to Telegram Group",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.shouldPost }}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "f6a7b8c9-d0e1-2345-f012-456789012345",
+      "name": "Check if Should Post",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const currentDate = new Date();\nconst dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.\nconst hour = currentDate.getHours();\n\n// Example: Only post on weekdays (Monday-Friday)\nconst isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;\n\n// Get random motivational message\nconst messages = [\n  \"🌟 <b>Good morning!</b>\\n\\nStart your day with positive energy!\\n\\n<i>Today is {{ $now.format('dddd, MMMM D, YYYY') }}</i>\",\n  \"☀️ <b>New day, new opportunities!</b>\\n\\nMake today count!\\n\\n<i>{{ $now.format('dddd, MMMM D, YYYY') }}</i>\",\n  \"💪 <b>Rise and shine!</b>\\n\\nYou've got this!\\n\\n<i>{{ $now.format('dddd, MMMM D, YYYY') }}</i>\",\n  \"🎯 <b>Focus on your goals!</b>\\n\\nEvery step forward counts.\\n\\n<i>{{ $now.format('dddd, MMMM D, YYYY') }}</i>\",\n  \"✨ <b>Believe in yourself!</b>\\n\\nGreat things are coming your way.\\n\\n<i>{{ $now.format('dddd, MMMM D, YYYY') }}</i>\"\n];\n\nconst randomMessage = messages[Math.floor(Math.random() * messages.length)];\n\nreturn {\n  chatId: '-1001234567890', // Replace with your group chat ID\n  message: randomMessage,\n  shouldPost: isWeekday,\n  timestamp: currentDate.toISOString(),\n  dayOfWeek: dayOfWeek,\n  hour: hour\n};"
+      },
+      "id": "a7b8c9d0-e1f2-3456-0123-567890123456",
+      "name": "Prepare Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex"
+      },
+      "id": "b8c9d0e1-f2a3-4567-1234-678901234567",
+      "name": "No Post Today",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        480
+      ],
+      "notes": "Workflow ends here if conditions not met"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Message": {
+      "main": [
+        [
+          {
+            "node": "Check if Should Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Should Post": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram Group",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Post Today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1",
+  "id": "telegram-scheduled-posting",
+  "meta": {
+    "instanceId": "n8n-telegram-scheduled-workflow"
+  },
+  "tags": []
+}

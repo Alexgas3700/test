@@ -1,0 +1,38 @@
+{
+  "telegram": {
+    "botToken": "123456789:ABCdefGHIjklMNOpqrsTUVwxyz",
+    "chatId": "-1001234567890",
+    "parseMode": "HTML"
+  },
+  "webhook": {
+    "apiKey": "your-secret-api-key-here",
+    "path": "telegram-post",
+    "port": 5678
+  },
+  "schedule": {
+    "enabled": true,
+    "cronExpression": "0 9 * * *",
+    "timezone": "Europe/Moscow"
+  },
+  "posting": {
+    "includeTimestamp": true,
+    "disableNotification": false,
+    "disableWebPagePreview": false
+  },
+  "messages": {
+    "templates": [
+      {
+        "name": "morning",
+        "content": "🌟 <b>Доброе утро!</b>\n\nНачните день с позитива!\n\n<i>{{ date }}</i>"
+      },
+      {
+        "name": "announcement",
+        "content": "📢 <b>{{ title }}</b>\n\n{{ message }}\n\n<i>{{ timestamp }}</i>"
+      },
+      {
+        "name": "reminder",
+        "content": "⏰ <b>Напоминание</b>\n\n{{ message }}"
+      }
+    ]
+  }
+}

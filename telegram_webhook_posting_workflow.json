@@ -1,0 +1,176 @@
+{
+  "name": "Telegram Webhook Posting",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-post",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c9d0e1f2-a3b4-5678-2345-789012345678",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "telegram-post-webhook",
+      "notes": "Receives POST requests with message data"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId || '-1001234567890' }}",
+        "text": "={{ $json.formattedMessage }}",
+        "additionalFields": {
+          "parse_mode": "={{ $json.parseMode || 'HTML' }}",
+          "disable_web_page_preview": "={{ $json.disablePreview || false }}",
+          "disable_notification": "={{ $json.silent || false }}"
+        }
+      },
+      "id": "d0e1f2a3-b4c5-6789-3456-890123456789",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Message sent to Telegram\", \"timestamp\": $now.toISO() } }}",
+        "options": {}
+      },
+      "id": "e1f2a3b4-c5d6-7890-4567-901234567890",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and format incoming webhook data\nconst body = $input.item.json.body || {};\n\n// Extract message content\nconst message = body.message || body.text || '';\nconst title = body.title || '';\nconst chatId = body.chatId || body.chat_id || '-1001234567890';\nconst parseMode = body.parseMode || body.parse_mode || 'HTML';\nconst disablePreview = body.disablePreview || body.disable_preview || false;\nconst silent = body.silent || false;\n\n// Validate required fields\nif (!message) {\n  throw new Error('Message content is required');\n}\n\n// Format message with optional title\nlet formattedMessage = '';\nif (title) {\n  formattedMessage = `<b>${title}</b>\\n\\n${message}`;\n} else {\n  formattedMessage = message;\n}\n\n// Add timestamp if requested\nif (body.includeTimestamp) {\n  const timestamp = new Date().toLocaleString('ru-RU', {\n    timeZone: 'Europe/Moscow',\n    year: 'numeric',\n    month: 'long',\n    day: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit'\n  });\n  formattedMessage += `\\n\\n<i>📅 ${timestamp}</i>`;\n}\n\nreturn {\n  chatId,\n  formattedMessage,\n  parseMode,\n  disablePreview,\n  silent,\n  originalData: body\n};"
+      },
+      "id": "f2a3b4c5-d6e7-8901-5678-012345678901",
+      "name": "Process Webhook Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.apiKey }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "a3b4c5d6-e7f8-9012-6789-123456789012",
+      "name": "Validate API Key",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ],
+      "notes": "Optional: Add API key validation for security"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"error\": \"Invalid or missing API key\", \"timestamp\": $now.toISO() } }}",
+        "responseCode": 401,
+        "options": {}
+      },
+      "id": "b4c5d6e7-f8a9-0123-7890-234567890123",
+      "name": "Unauthorized Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        900,
+        480
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Webhook Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Webhook Data": {
+      "main": [
+        [
+          {
+            "node": "Validate API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate API Key": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unauthorized Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1",
+  "id": "telegram-webhook-posting",
+  "meta": {
+    "instanceId": "n8n-telegram-webhook-workflow"
+  },
+  "tags": []
+}

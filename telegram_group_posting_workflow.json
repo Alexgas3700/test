@@ -1,0 +1,100 @@
+{
+  "name": "Telegram Group Posting Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": false,
+          "disable_notification": false
+        }
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Send Telegram Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "chatId",
+              "value": "-1001234567890"
+            },
+            {
+              "name": "message",
+              "value": "🎉 Hello from n8n!\n\nThis is an automated message posted to your Telegram group.\n\n<b>Features:</b>\n• Automated posting\n• Rich text formatting (HTML)\n• Scheduled messages\n• Dynamic content\n\n<i>Powered by n8n automation</i>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "Set Message Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Set Message Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Message Data": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1",
+  "id": "telegram-group-posting",
+  "meta": {
+    "instanceId": "n8n-telegram-workflow"
+  },
+  "tags": []
+}
