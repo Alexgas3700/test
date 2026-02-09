@@ -1,0 +1,32 @@
+{
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "username": "your_username",
+    "password": "your_password",
+    "use_tls": true,
+    "use_ssl": false
+  },
+  "email": {
+    "default_from_email": "noreply@example.com",
+    "default_from_name": "Marketing Team"
+  },
+  "tracking": {
+    "enabled": true,
+    "track_opens": true,
+    "track_clicks": true,
+    "tracking_domain": "track.example.com"
+  },
+  "rate_limiting": {
+    "max_emails_per_hour": 1000,
+    "max_emails_per_day": 10000
+  },
+  "database": {
+    "url": "sqlite:///marketing.db"
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "db": 0
+  }
+}

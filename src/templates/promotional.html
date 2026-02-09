@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: #ffffff;
+            padding: 50px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 36px;
+            margin: 0;
+        }
+        .discount-badge {
+            background-color: #ffd700;
+            color: #333;
+            font-size: 48px;
+            font-weight: bold;
+            padding: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 20px 0;
+            width: 120px;
+            height: 120px;
+            line-height: 120px;
+        }
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .offer-details {
+            background-color: #fff3cd;
+            border: 2px dashed #ffc107;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 10px;
+        }
+        .promo-code {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f5576c;
+            letter-spacing: 2px;
+            margin: 10px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 18px 50px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 30px;
+            margin: 20px 0;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .urgency {
+            color: #dc3545;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .footer a {
+            color: #f5576c;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ offer_title|default('Special Offer!') }}</h1>
+            <div class="discount-badge">{{ discount|default('50%') }}</div>
+            <p style="font-size: 20px;">{{ offer_subtitle|default('Limited Time Only!') }}</p>
+        </div>
+        <div class="content">
+            <p style="font-size: 18px;">Hi {{ first_name }},</p>
+            
+            <p>{{ offer_description|default('We have an exclusive offer just for you!') }}</p>
+            
+            <div class="offer-details">
+                <h2>Use Promo Code:</h2>
+                <div class="promo-code">{{ promo_code }}</div>
+                <p>{{ offer_terms|default('Valid on all products') }}</p>
+            </div>
+            
+            <a href="{{ shop_url }}" class="button">Shop Now</a>
+            
+            <p class="urgency">⏰ Offer expires {{ expiry_date }}!</p>
+            
+            <p>Don't miss out on this amazing deal. Shop now and save big!</p>
+        </div>
+        <div class="footer">
+            <p>© 2026 {{ company_name }}. All rights reserved.</p>
+            <p>
+                <a href="{{ unsubscribe_url }}">Unsubscribe</a> | 
+                <a href="{{ preferences_url }}">Update Preferences</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
