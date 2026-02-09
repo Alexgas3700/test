@@ -1,0 +1,474 @@
+{
+  "name": "Email Marketing - Client Acquisition",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "notes": "Triggers every Monday at 9:00 AM"
+    },
+    {
+      "parameters": {
+        "url": "={{$json.webhook_url || 'https://api.example.com/subscribers'}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "get-subscribers",
+      "name": "Get Subscriber List",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300],
+      "notes": "Fetch list of subscribers from your CRM/Database"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.email}}",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{$json.subscribed}}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "filter-active",
+      "name": "Filter Active Subscribers",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "notes": "Only process active, valid subscribers"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Segment subscribers based on criteria\nconst items = $input.all();\nconst segments = {\n  new_leads: [],\n  engaged: [],\n  inactive: []\n};\n\nfor (const item of items) {\n  const data = item.json;\n  const daysSinceSignup = Math.floor((Date.now() - new Date(data.signup_date).getTime()) / (1000 * 60 * 60 * 24));\n  const lastEngagement = data.last_engagement_days || 999;\n  \n  if (daysSinceSignup <= 7) {\n    segments.new_leads.push(item);\n  } else if (lastEngagement <= 30) {\n    segments.engaged.push(item);\n  } else {\n    segments.inactive.push(item);\n  }\n}\n\nreturn [\n  { json: { segment: 'new_leads', subscribers: segments.new_leads } },\n  { json: { segment: 'engaged', subscribers: segments.engaged } },\n  { json: { segment: 'inactive', subscribers: segments.inactive } }\n];"
+      },
+      "id": "segment-subscribers",
+      "name": "Segment Subscribers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "notes": "Segment subscribers into new leads, engaged, and inactive"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "={{$json.segment}}"
+      },
+      "id": "switch-segment",
+      "name": "Route by Segment",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "notes": "Route to different email templates based on segment"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Welcome email template for new leads\nconst subscribers = $json.subscribers;\nconst emails = [];\n\nfor (const sub of subscribers) {\n  const data = sub.json;\n  emails.push({\n    email: data.email,\n    name: data.name || 'Valued Customer',\n    subject: '🎉 Welcome! Get Started with {{company_name}}',\n    template: 'welcome',\n    personalization: {\n      first_name: data.name?.split(' ')[0] || 'there',\n      company_name: '{{company_name}}',\n      special_offer: '20% off your first purchase',\n      cta_link: '{{website_url}}/welcome-offer'\n    }\n  });\n}\n\nreturn emails.map(email => ({ json: email }));"
+      },
+      "id": "template-new-leads",
+      "name": "New Leads Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200],
+      "notes": "Welcome email with special offer for new subscribers"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Engagement email template\nconst subscribers = $json.subscribers;\nconst emails = [];\n\nfor (const sub of subscribers) {\n  const data = sub.json;\n  emails.push({\n    email: data.email,\n    name: data.name || 'Valued Customer',\n    subject: '✨ New Features & Tips Just for You',\n    template: 'engagement',\n    personalization: {\n      first_name: data.name?.split(' ')[0] || 'there',\n      company_name: '{{company_name}}',\n      content_highlights: 'Latest blog posts, case studies, and product updates',\n      cta_link: '{{website_url}}/resources'\n    }\n  });\n}\n\nreturn emails.map(email => ({ json: email }));"
+      },
+      "id": "template-engaged",
+      "name": "Engaged Users Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300],
+      "notes": "Value-added content for engaged subscribers"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Re-engagement email template\nconst subscribers = $json.subscribers;\nconst emails = [];\n\nfor (const sub of subscribers) {\n  const data = sub.json;\n  emails.push({\n    email: data.email,\n    name: data.name || 'Valued Customer',\n    subject: '💌 We Miss You! Exclusive Comeback Offer Inside',\n    template: 'reengagement',\n    personalization: {\n      first_name: data.name?.split(' ')[0] || 'there',\n      company_name: '{{company_name}}',\n      special_offer: '30% off to welcome you back',\n      cta_link: '{{website_url}}/comeback-offer'\n    }\n  });\n}\n\nreturn emails.map(email => ({ json: email }));"
+      },
+      "id": "template-inactive",
+      "name": "Re-engagement Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 400],
+      "notes": "Win-back campaign for inactive subscribers"
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$json.personalization.company_name}} <noreply@{{$env.DOMAIN}}>",
+        "toEmail": "={{$json.email}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }\n    .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }\n    .cta-button { display: inline-block; padding: 15px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }\n    .footer { text-align: center; padding: 20px; color: #888; font-size: 12px; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>{{$json.personalization.company_name}}</h1>\n    </div>\n    <div class=\"content\">\n      <h2>Hi {{$json.personalization.first_name}}!</h2>\n      <p>{{$json.template === 'welcome' ? 'Welcome to our community! We\\'re thrilled to have you on board.' : $json.template === 'engagement' ? 'We have some exciting updates to share with you!' : 'We noticed you haven\\'t been around lately. We miss you!'}}</p>\n      \n      {{$json.personalization.special_offer ? '<p><strong>Special Offer:</strong> ' + $json.personalization.special_offer + '</p>' : ''}}\n      \n      {{$json.personalization.content_highlights ? '<p>' + $json.personalization.content_highlights + '</p>' : ''}}\n      \n      <p style=\"text-align: center;\">\n        <a href=\"{{$json.personalization.cta_link}}\" class=\"cta-button\">{{$json.template === 'welcome' ? 'Claim Your Offer' : $json.template === 'engagement' ? 'Explore Now' : 'Come Back'}}</a>\n      </p>\n      \n      <p>Best regards,<br>The {{$json.personalization.company_name}} Team</p>\n    </div>\n    <div class=\"footer\">\n      <p>You're receiving this email because you subscribed to {{$json.personalization.company_name}}.</p>\n      <p><a href=\"{{$env.WEBSITE_URL}}/unsubscribe?email={{$json.email}}\">Unsubscribe</a></p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "send-email-smtp",
+      "name": "Send Email (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1450, 300],
+      "notes": "Send emails via SMTP (Gmail, SendGrid, etc.)",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "fromEmail": "={{$json.personalization.company_name}} <{{$env.SENDGRID_FROM_EMAIL}}>",
+        "toEmail": "={{$json.email}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }\n    .container { max-width: 600px; margin: 0 auto; background: white; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; }\n    .content { padding: 40px 30px; }\n    .cta-button { display: inline-block; padding: 15px 40px; background: #667eea; color: white !important; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }\n    .cta-button:hover { background: #5568d3; }\n    .footer { text-align: center; padding: 20px; background: #f9f9f9; color: #888; font-size: 12px; }\n    .footer a { color: #667eea; text-decoration: none; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1 style=\"margin: 0;\">{{$json.personalization.company_name}}</h1>\n    </div>\n    <div class=\"content\">\n      <h2>Hi {{$json.personalization.first_name}}!</h2>\n      <p>{{$json.template === 'welcome' ? 'Welcome to our community! We\\'re thrilled to have you on board. Get ready for exclusive content, special offers, and insider tips.' : $json.template === 'engagement' ? 'We have some exciting updates to share with you! Check out what\\'s new and discover how we can help you achieve your goals.' : 'We noticed you haven\\'t been around lately, and we miss you! We\\'ve been working hard to bring you even more value.'}}</p>\n      \n      {{$json.personalization.special_offer ? '<div style=\"background: #f0f7ff; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0;\"><strong>🎁 Special Offer:</strong> ' + $json.personalization.special_offer + '</div>' : ''}}\n      \n      {{$json.personalization.content_highlights ? '<p><strong>What\\'s New:</strong><br>' + $json.personalization.content_highlights + '</p>' : ''}}\n      \n      <div style=\"text-align: center; margin: 30px 0;\">\n        <a href=\"{{$json.personalization.cta_link}}\" class=\"cta-button\">{{$json.template === 'welcome' ? '🎉 Claim Your Offer' : $json.template === 'engagement' ? '✨ Explore Now' : '💌 Come Back'}}</a>\n      </div>\n      \n      <p>We're here to help you succeed. If you have any questions, just reply to this email!</p>\n      \n      <p>Best regards,<br><strong>The {{$json.personalization.company_name}} Team</strong></p>\n    </div>\n    <div class=\"footer\">\n      <p>You're receiving this email because you subscribed to {{$json.personalization.company_name}}.</p>\n      <p><a href=\"{{$env.WEBSITE_URL}}/unsubscribe?email={{$json.email}}\">Unsubscribe</a> | <a href=\"{{$env.WEBSITE_URL}}/preferences\">Email Preferences</a></p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "send-email-sendgrid",
+      "name": "Send Email (SendGrid)",
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [1450, 200],
+      "notes": "Send via SendGrid API (recommended for deliverability)",
+      "credentials": {
+        "sendGridApi": {
+          "id": "sendgrid_credentials",
+          "name": "SendGrid API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": "={{$env.AIRTABLE_BASE_ID}}",
+        "table": "Email Campaigns",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{$json.email}}",
+            "campaign_type": "={{$json.template}}",
+            "sent_date": "={{$now.toISO()}}",
+            "subject": "={{$json.subject}}",
+            "status": "sent"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-to-airtable",
+      "name": "Log Campaign (Airtable)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 1,
+      "position": [1650, 200],
+      "notes": "Track sent emails in Airtable",
+      "credentials": {
+        "airtableApi": {
+          "id": "airtable_credentials",
+          "name": "Airtable API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{$env.WEBHOOK_URL}}/analytics",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{$json.email}}"
+            },
+            {
+              "name": "campaign",
+              "value": "={{$json.template}}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{$now.toISO()}}"
+            },
+            {
+              "name": "status",
+              "value": "sent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "track-analytics",
+      "name": "Track Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1650, 300],
+      "notes": "Send analytics to your tracking system"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-errors",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1650, 400],
+      "notes": "Detect sending failures"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SLACK_WEBHOOK_URL}}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "=⚠️ Email Campaign Error: {{$json.error}} for {{$json.email}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-slack",
+      "name": "Notify Team (Slack)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1850, 400],
+      "notes": "Alert team about failures"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Generate campaign summary\nconst items = $input.all();\nconst summary = {\n  total_sent: items.length,\n  by_segment: {},\n  timestamp: new Date().toISOString(),\n  success_rate: '100%'\n};\n\nfor (const item of items) {\n  const segment = item.json.template || 'unknown';\n  summary.by_segment[segment] = (summary.by_segment[segment] || 0) + 1;\n}\n\nreturn [{ json: summary }];"
+      },
+      "id": "generate-summary",
+      "name": "Generate Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 200],
+      "notes": "Create campaign performance summary"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SLACK_WEBHOOK_URL}}",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "=📊 Email Campaign Complete!\n\nTotal Sent: {{$json.total_sent}}\nNew Leads: {{$json.by_segment.welcome || 0}}\nEngaged: {{$json.by_segment.engagement || 0}}\nRe-engagement: {{$json.by_segment.reengagement || 0}}\n\nTimestamp: {{$json.timestamp}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "report-success",
+      "name": "Send Success Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2050, 200],
+      "notes": "Send completion report to team"
+    }
+  ],
+  "connections": {
+    "Weekly Schedule": {
+      "main": [
+        [
+          {
+            "node": "Get Subscriber List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Subscriber List": {
+      "main": [
+        [
+          {
+            "node": "Filter Active Subscribers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Active Subscribers": {
+      "main": [
+        [
+          {
+            "node": "Segment Subscribers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Segment Subscribers": {
+      "main": [
+        [
+          {
+            "node": "Route by Segment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Segment": {
+      "main": [
+        [
+          {
+            "node": "New Leads Template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Engaged Users Template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Re-engagement Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Leads Template": {
+      "main": [
+        [
+          {
+            "node": "Send Email (SendGrid)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Engaged Users Template": {
+      "main": [
+        [
+          {
+            "node": "Send Email (SendGrid)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-engagement Template": {
+      "main": [
+        [
+          {
+            "node": "Send Email (SendGrid)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email (SendGrid)": {
+      "main": [
+        [
+          {
+            "node": "Log Campaign (Airtable)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Track Analytics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Campaign (Airtable)": {
+      "main": [
+        [
+          {
+            "node": "Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Notify Team (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Summary": {
+      "main": [
+        [
+          {
+            "node": "Send Success Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Marketing",
+      "id": "marketing"
+    },
+    {
+      "name": "Email",
+      "id": "email"
+    },
+    {
+      "name": "Automation",
+      "id": "automation"
+    }
+  ],
+  "meta": {
+    "instanceId": "n8n-email-marketing"
+  },
+  "pinData": {},
+  "versionId": "1.0.0"
+}

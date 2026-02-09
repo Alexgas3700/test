@@ -1,0 +1,140 @@
+{
+  "description": "Example data format for subscriber list API response",
+  "example_api_response": {
+    "subscribers": [
+      {
+        "email": "john.doe@example.com",
+        "name": "John Doe",
+        "subscribed": true,
+        "signup_date": "2026-02-02",
+        "last_engagement_days": 3,
+        "tags": ["lead", "interested-in-product-a"],
+        "metadata": {
+          "source": "website",
+          "country": "US",
+          "language": "en"
+        }
+      },
+      {
+        "email": "jane.smith@example.com",
+        "name": "Jane Smith",
+        "subscribed": true,
+        "signup_date": "2026-01-15",
+        "last_engagement_days": 25,
+        "tags": ["customer", "premium"],
+        "metadata": {
+          "source": "referral",
+          "country": "UK",
+          "language": "en"
+        }
+      },
+      {
+        "email": "inactive.user@example.com",
+        "name": "Inactive User",
+        "subscribed": true,
+        "signup_date": "2025-11-01",
+        "last_engagement_days": 45,
+        "tags": ["inactive"],
+        "metadata": {
+          "source": "social-media",
+          "country": "CA",
+          "language": "en"
+        }
+      }
+    ],
+    "total": 3,
+    "page": 1,
+    "per_page": 100
+  },
+  "required_fields": {
+    "email": {
+      "type": "string",
+      "description": "Subscriber email address",
+      "required": true,
+      "example": "user@example.com"
+    },
+    "name": {
+      "type": "string",
+      "description": "Subscriber full name",
+      "required": false,
+      "example": "John Doe"
+    },
+    "subscribed": {
+      "type": "boolean",
+      "description": "Whether the user is currently subscribed",
+      "required": true,
+      "example": true
+    },
+    "signup_date": {
+      "type": "string",
+      "format": "ISO 8601 date (YYYY-MM-DD)",
+      "description": "Date when user subscribed",
+      "required": true,
+      "example": "2026-02-01"
+    },
+    "last_engagement_days": {
+      "type": "number",
+      "description": "Days since last engagement (email open, click, etc.)",
+      "required": false,
+      "example": 5,
+      "note": "If not provided, user will be treated as inactive"
+    }
+  },
+  "optional_fields": {
+    "tags": {
+      "type": "array",
+      "description": "User tags for additional segmentation",
+      "example": ["lead", "premium", "interested-in-product"]
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional user information",
+      "example": {
+        "source": "website",
+        "country": "US",
+        "language": "en"
+      }
+    }
+  },
+  "segmentation_logic": {
+    "new_leads": {
+      "condition": "signup_date <= 7 days ago",
+      "template": "welcome",
+      "offer": "20% discount"
+    },
+    "engaged": {
+      "condition": "last_engagement_days <= 30",
+      "template": "engagement",
+      "content": "value-added content, updates"
+    },
+    "inactive": {
+      "condition": "last_engagement_days > 30",
+      "template": "reengagement",
+      "offer": "30% discount"
+    }
+  },
+  "integration_examples": {
+    "google_sheets": {
+      "description": "Use Google Sheets node in n8n",
+      "setup": "Connect Google Sheets with subscriber data",
+      "columns": ["email", "name", "subscribed", "signup_date", "last_engagement_days"]
+    },
+    "airtable": {
+      "description": "Use Airtable node in n8n",
+      "setup": "Connect to Airtable base with subscribers table",
+      "fields": ["Email", "Name", "Subscribed", "Signup Date", "Last Engagement Days"]
+    },
+    "postgresql": {
+      "description": "Use PostgreSQL node in n8n",
+      "query": "SELECT email, name, subscribed, signup_date, EXTRACT(DAY FROM (NOW() - last_engagement_date)) as last_engagement_days FROM subscribers WHERE subscribed = true"
+    },
+    "rest_api": {
+      "description": "Use HTTP Request node in n8n",
+      "method": "GET",
+      "url": "https://your-api.com/subscribers",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
