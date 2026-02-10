@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Exclusive Discount Offer</title>
+  <style>
+    /* Reset styles */
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    
+    /* Base styles */
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100% !important;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333333;
+      background-color: #f4f4f4;
+    }
+    
+    /* Container */
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #ffffff;
+      padding: 40px 30px;
+      text-align: center;
+      border-radius: 10px 10px 0 0;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 32px;
+      font-weight: bold;
+      line-height: 1.2;
+    }
+    
+    .header .emoji {
+      font-size: 48px;
+      display: block;
+      margin-bottom: 15px;
+    }
+    
+    /* Content */
+    .content {
+      background-color: #f9f9f9;
+      padding: 40px 30px;
+    }
+    
+    .content h2 {
+      color: #333333;
+      font-size: 24px;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+    
+    .content p {
+      margin: 0 0 15px 0;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    
+    /* Discount box */
+    .discount-box {
+      background-color: #ffffff;
+      border: 3px dashed #667eea;
+      padding: 30px;
+      margin: 30px 0;
+      text-align: center;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .discount-box p {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: #666666;
+    }
+    
+    .discount-code {
+      font-size: 32px;
+      font-weight: bold;
+      color: #667eea;
+      letter-spacing: 3px;
+      margin: 20px 0;
+      padding: 15px;
+      background-color: #f0f4ff;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .expiry-date {
+      font-size: 14px;
+      color: #999999;
+      margin-top: 10px;
+    }
+    
+    /* Benefits section */
+    .benefits {
+      background-color: #ffffff;
+      padding: 25px;
+      margin: 25px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .benefits h3 {
+      color: #667eea;
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+    
+    .benefit-item {
+      margin: 15px 0;
+      padding-left: 30px;
+      position: relative;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    
+    .benefit-item:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #667eea;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    
+    /* CTA Button */
+    .cta-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #ffffff !important;
+      padding: 18px 45px;
+      text-decoration: none;
+      border-radius: 50px;
+      font-weight: bold;
+      font-size: 18px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s ease;
+    }
+    
+    .cta-button:hover {
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      transform: translateY(-2px);
+    }
+    
+    /* Why choose us section */
+    .why-choose {
+      margin: 25px 0;
+    }
+    
+    .why-choose h3 {
+      color: #333333;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    
+    .stats {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #ffffff;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      margin: 20px 0;
+    }
+    
+    .stats-number {
+      font-size: 36px;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    .stats-text {
+      font-size: 14px;
+    }
+    
+    /* Footer */
+    .footer {
+      background-color: #333333;
+      color: #ffffff;
+      padding: 30px;
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.6;
+      border-radius: 0 0 10px 10px;
+    }
+    
+    .footer a {
+      color: #667eea;
+      text-decoration: none;
+    }
+    
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    
+    .footer p {
+      margin: 10px 0;
+    }
+    
+    .social-links {
+      margin: 20px 0;
+    }
+    
+    .social-links a {
+      display: inline-block;
+      margin: 0 10px;
+      color: #ffffff;
+      text-decoration: none;
+    }
+    
+    /* Responsive */
+    @media only screen and (max-width: 600px) {
+      .email-container {
+        width: 100% !important;
+      }
+      
+      .header, .content, .footer {
+        padding: 20px !important;
+      }
+      
+      .header h1 {
+        font-size: 24px !important;
+      }
+      
+      .discount-code {
+        font-size: 24px !important;
+        letter-spacing: 2px !important;
+      }
+      
+      .cta-button {
+        padding: 15px 30px !important;
+        font-size: 16px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f4; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <div class="email-container">
+          
+          <!-- Header -->
+          <div class="header">
+            <span class="emoji">🚀</span>
+            <h1>Специальное предложение для предпринимателей!</h1>
+          </div>
+          
+          <!-- Content -->
+          <div class="content">
+            <h2>Здравствуйте, {{FIRST_NAME}}!</h2>
+            
+            <p>Мы знаем, что управление бизнесом <strong>{{COMPANY_NAME}}</strong> требует самоотдачи, инноваций и правильных инструментов. Именно поэтому мы рады предложить вам <strong>эксклюзивную скидку {{DISCOUNT_AMOUNT}}%</strong> на наши премиальные услуги, разработанные специально для таких предпринимателей, как вы.</p>
+            
+            <!-- Discount Box -->
+            <div class="discount-box">
+              <p>Ваш эксклюзивный промокод:</p>
+              <div class="discount-code">{{DISCOUNT_CODE}}</div>
+              <p class="expiry-date">Действителен до {{OFFER_EXPIRES}}</p>
+            </div>
+            
+            <!-- Benefits -->
+            <div class="benefits">
+              <h3>Что вы получите:</h3>
+              <div class="benefit-item">Полный доступ к нашей платформе бизнес-автоматизации</div>
+              <div class="benefit-item">Приоритетная поддержка для предпринимателей</div>
+              <div class="benefit-item">Эксклюзивные шаблоны для роста бизнеса</div>
+              <div class="benefit-item">Ежемесячные консультации по стратегии</div>
+              <div class="benefit-item">Интеграция с более чем 200 бизнес-инструментами</div>
+            </div>
+            
+            <!-- CTA Button -->
+            <div class="cta-container">
+              <a href="{{LANDING_PAGE_URL}}?code={{DISCOUNT_CODE}}" class="cta-button">
+                Получить скидку сейчас
+              </a>
+            </div>
+            
+            <!-- Why Choose Us -->
+            <div class="why-choose">
+              <p style="margin-top: 30px;">Это предложение эксклюзивно для предпринимателей, которые готовы вывести свой бизнес на новый уровень. Не упустите эту ограниченную возможность!</p>
+              
+              <div class="stats">
+                <span class="stats-number">10,000+</span>
+                <span class="stats-text">предпринимателей доверяют нашей платформе</span>
+              </div>
+              
+              <h3>Почему выбирают нас?</h3>
+              <p>Более 10 000 предпринимателей доверяют нашей платформе для оптимизации операций, экономии времени и увеличения дохода. Присоединяйтесь к сообществу успешных владельцев бизнеса, которые трансформировали свой рабочий процесс.</p>
+              
+              <p><strong>Результаты наших клиентов:</strong></p>
+              <ul style="text-align: left; padding-left: 20px;">
+                <li>Экономия до 15 часов в неделю на рутинных задачах</li>
+                <li>Увеличение продуктивности на 40%</li>
+                <li>Рост выручки в среднем на 25% за первый год</li>
+                <li>Снижение операционных расходов на 30%</li>
+              </ul>
+            </div>
+            
+            <!-- Urgency -->
+            <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px;">
+              <p style="margin: 0; color: #856404;"><strong>⏰ Ограниченное предложение!</strong> Эта скидка действительна только до {{OFFER_EXPIRES}}. Не упустите возможность начать трансформацию вашего бизнеса уже сегодня.</p>
+            </div>
+            
+            <!-- Testimonial -->
+            <div style="background-color: #ffffff; padding: 20px; margin: 20px 0; border-radius: 10px; border-left: 4px solid #667eea;">
+              <p style="font-style: italic; margin-bottom: 10px;">"Эта платформа полностью изменила то, как я управляю своим бизнесом. Автоматизация освободила мне время для стратегического развития, а не для рутинных задач."</p>
+              <p style="margin: 0; font-weight: bold; color: #667eea;">— Анна Петрова, основатель ТехСтарт</p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="footer">
+            <p>Вы получили это письмо, потому что проявили интерес к бизнес-решениям для предпринимателей.</p>
+            
+            <div class="social-links">
+              <a href="#">Facebook</a> | 
+              <a href="#">LinkedIn</a> | 
+              <a href="#">Instagram</a> | 
+              <a href="#">Twitter</a>
+            </div>
+            
+            <p>
+              <a href="{{UNSUBSCRIBE_URL}}?email={{EMAIL}}">Отписаться</a> | 
+              <a href="{{PRIVACY_URL}}">Политика конфиденциальности</a> | 
+              <a href="#">Связаться с нами</a>
+            </p>
+            
+            <p style="margin-top: 20px; color: #999999;">
+              © 2026 Your Company. Все права защищены.<br>
+              Адрес: ул. Примерная, д. 123, Москва, 101000, Россия
+            </p>
+          </div>
+          
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

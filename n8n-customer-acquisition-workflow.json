@@ -1,0 +1,428 @@
+{
+  "name": "Customer Acquisition - Discount Offer Campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "",
+      "notes": "Triggers every Monday at 9:00 AM to send weekly discount offers"
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "url": "={{ $env.ENTREPRENEURS_DB_URL }}/api/entrepreneurs",
+        "options": {
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "status",
+                "value": "potential"
+              },
+              {
+                "name": "segment",
+                "value": "entrepreneur"
+              },
+              {
+                "name": "email_verified",
+                "value": "true"
+              }
+            ]
+          }
+        }
+      },
+      "id": "fetch-entrepreneurs",
+      "name": "Fetch Potential Entrepreneurs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300],
+      "notes": "Retrieves list of potential entrepreneur clients from database"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "condition-2",
+              "leftValue": "={{ $json.business_type }}",
+              "rightValue": "entrepreneur",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "condition-3",
+              "leftValue": "={{ $json.consent_marketing }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-valid-contacts",
+      "name": "Filter Valid Contacts",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "notes": "Filters contacts with valid email, entrepreneur type, and marketing consent"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-1",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-2",
+              "name": "first_name",
+              "value": "={{ $json.first_name || 'Entrepreneur' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-3",
+              "name": "company_name",
+              "value": "={{ $json.company_name || 'your business' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-4",
+              "name": "discount_code",
+              "value": "={{ 'NEWBIZ' + $now.format('MMDD') + '-' + $json.id.toString().slice(-4).toUpperCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-5",
+              "name": "discount_amount",
+              "value": "={{ $json.industry === 'tech' ? '25' : '20' }}",
+              "type": "string"
+            },
+            {
+              "id": "assign-6",
+              "name": "offer_expires",
+              "value": "={{ $now.plus(14, 'days').format('MMMM dd, yyyy') }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "prepare-email-data",
+      "name": "Prepare Email Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [850, 300],
+      "notes": "Prepares personalized data for each email including discount codes"
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SENDER_EMAIL || 'marketing@yourcompany.com' }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "🎁 Exclusive {{ $json.discount_amount }}% Discount for {{ $json.first_name }}!",
+        "emailType": "html",
+        "message": "<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }\n    .content { background: #f9f9f9; padding: 30px; }\n    .discount-box { background: #fff; border: 3px dashed #667eea; padding: 25px; margin: 20px 0; text-align: center; border-radius: 10px; }\n    .discount-code { font-size: 28px; font-weight: bold; color: #667eea; letter-spacing: 2px; margin: 15px 0; }\n    .cta-button { display: inline-block; background: #667eea; color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }\n    .footer { background: #333; color: #fff; padding: 20px; text-align: center; font-size: 12px; border-radius: 0 0 10px 10px; }\n    .benefits { background: white; padding: 20px; margin: 20px 0; border-radius: 10px; }\n    .benefit-item { margin: 15px 0; padding-left: 25px; position: relative; }\n    .benefit-item:before { content: \"✓\"; position: absolute; left: 0; color: #667eea; font-weight: bold; font-size: 18px; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>🚀 Special Offer for Entrepreneurs!</h1>\n    </div>\n    <div class=\"content\">\n      <h2>Hello {{ $json.first_name }}!</h2>\n      <p>We know that running {{ $json.company_name }} takes dedication, innovation, and the right tools. That's why we're excited to offer you an <strong>exclusive {{ $json.discount_amount }}% discount</strong> on our premium services designed specifically for entrepreneurs like you.</p>\n      \n      <div class=\"discount-box\">\n        <p style=\"margin: 0; font-size: 18px;\">Your Exclusive Discount Code:</p>\n        <div class=\"discount-code\">{{ $json.discount_code }}</div>\n        <p style=\"margin: 0; color: #666;\">Valid until {{ $json.offer_expires }}</p>\n      </div>\n\n      <div class=\"benefits\">\n        <h3 style=\"color: #667eea; margin-top: 0;\">What You'll Get:</h3>\n        <div class=\"benefit-item\">Full access to our business automation platform</div>\n        <div class=\"benefit-item\">Priority customer support for entrepreneurs</div>\n        <div class=\"benefit-item\">Exclusive templates for business growth</div>\n        <div class=\"benefit-item\">Monthly strategy consultation calls</div>\n        <div class=\"benefit-item\">Integration with 200+ business tools</div>\n      </div>\n\n      <div style=\"text-align: center;\">\n        <a href=\"{{ $env.LANDING_PAGE_URL || 'https://yourcompany.com/claim-offer' }}?code={{ $json.discount_code }}\" class=\"cta-button\">Claim Your Discount Now</a>\n      </div>\n\n      <p style=\"margin-top: 30px;\">This offer is exclusively for entrepreneurs who are ready to take their business to the next level. Don't miss out on this limited-time opportunity!</p>\n      \n      <p><strong>Why choose us?</strong></p>\n      <p>Over 10,000 entrepreneurs trust our platform to streamline their operations, save time, and increase revenue. Join the community of successful business owners who have transformed their workflow.</p>\n    </div>\n    <div class=\"footer\">\n      <p>You're receiving this email because you expressed interest in business solutions for entrepreneurs.</p>\n      <p><a href=\"{{ $env.UNSUBSCRIBE_URL || '#' }}?email={{ $json.email }}\" style=\"color: #667eea;\">Unsubscribe</a> | <a href=\"{{ $env.PRIVACY_URL || '#' }}\" style=\"color: #667eea;\">Privacy Policy</a></p>\n      <p>&copy; 2026 Your Company. All rights reserved.</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {
+          "allowUnauthorizedCerts": false,
+          "ccEmail": "",
+          "bccEmail": "={{ $env.BCC_EMAIL || '' }}"
+        }
+      },
+      "id": "send-discount-email",
+      "name": "Send Discount Offer Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1050, 300],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Account"
+        }
+      },
+      "notes": "Sends personalized discount offer email to entrepreneurs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CRM_API_URL }}/api/campaigns/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {},
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "campaign_type",
+              "value": "send_discount_offer"
+            },
+            {
+              "name": "discount_code",
+              "value": "={{ $json.discount_code }}"
+            },
+            {
+              "name": "sent_at",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "name": "status",
+              "value": "sent"
+            }
+          ]
+        }
+      },
+      "id": "log-campaign",
+      "name": "Log Campaign Activity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300],
+      "notes": "Logs the campaign activity to CRM for tracking and analytics"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "error-condition",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "or"
+        }
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 500],
+      "notes": "Handles errors during email sending"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ERROR_LOG_URL }}/api/errors",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflow_id",
+              "value": "customer-acquisition-discount"
+            },
+            {
+              "name": "error_message",
+              "value": "={{ $json.error }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 500],
+      "notes": "Logs errors for troubleshooting"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "summary-1",
+              "name": "total_sent",
+              "value": "={{ $items().length }}",
+              "type": "number"
+            },
+            {
+              "id": "summary-2",
+              "name": "campaign_date",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "summary-3",
+              "name": "campaign_type",
+              "value": "send_discount_offer",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "campaign-summary",
+      "name": "Campaign Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [1450, 300],
+      "notes": "Creates summary of campaign execution"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Potential Entrepreneurs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Potential Entrepreneurs": {
+      "main": [
+        [
+          {
+            "node": "Filter Valid Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Valid Contacts": {
+      "main": [
+        [
+          {
+            "node": "Prepare Email Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Email Data": {
+      "main": [
+        [
+          {
+            "node": "Send Discount Offer Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Discount Offer Email": {
+      "main": [
+        [
+          {
+            "node": "Log Campaign Activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Campaign Activity": {
+      "main": [
+        [
+          {
+            "node": "Campaign Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "",
+    "timezone": "Europe/Moscow",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "id": "customer-acquisition",
+      "name": "Customer Acquisition"
+    },
+    {
+      "id": "email-marketing",
+      "name": "Email Marketing"
+    },
+    {
+      "id": "entrepreneurs",
+      "name": "Entrepreneurs"
+    }
+  ],
+  "meta": {
+    "instanceId": "n8n-customer-acquisition"
+  },
+  "pinData": {},
+  "versionId": "1.0.0"
+}
