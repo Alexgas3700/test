@@ -1,0 +1,755 @@
+{
+  "name": "VK Group Auto Posting",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.fileId }}",
+          "mode": "id"
+        }
+      },
+      "id": "google-sheets-read",
+      "name": "Read Posts from Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        470,
+        300
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Read scheduled posts from Google Sheets with columns: post_date, post_type, content, image_url, poll_question, poll_options"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "filter-by-date",
+              "leftValue": "={{ new Date($json.post_date).getTime() }}",
+              "rightValue": "={{ Date.now() }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            },
+            {
+              "id": "not-published",
+              "leftValue": "={{ $json.published }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-posts",
+      "name": "Filter Posts Ready to Publish",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-text",
+              "leftValue": "={{ $json.post_type }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-text-post",
+      "name": "If Text Post",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        910,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-image",
+              "leftValue": "={{ $json.post_type }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-image-post",
+      "name": "If Image Post",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        910,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-poll",
+              "leftValue": "={{ $json.post_type }}",
+              "rightValue": "poll",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-poll-post",
+      "name": "If Poll Post",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        910,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/wall.post",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.vkAccessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            },
+            {
+              "name": "owner_id",
+              "value": "={{ $credentials.vkGroupId }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.content }}"
+            },
+            {
+              "name": "from_group",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "vk-post-text",
+      "name": "VK Post Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1130,
+        100
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "2",
+          "name": "VK API Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.image_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-image",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1130,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/photos.getWallUploadServer",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.vkAccessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            },
+            {
+              "name": "group_id",
+              "value": "={{ Math.abs(parseInt($credentials.vkGroupId)) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "vk-get-upload-server",
+      "name": "VK Get Upload Server",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1350,
+        300
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "2",
+          "name": "VK API Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.response.upload_url }}",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "photo",
+              "inputDataFieldName": "={{ $binary.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "vk-upload-image",
+      "name": "VK Upload Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1570,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/photos.saveWallPhoto",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.vkAccessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            },
+            {
+              "name": "group_id",
+              "value": "={{ Math.abs(parseInt($credentials.vkGroupId)) }}"
+            },
+            {
+              "name": "photo",
+              "value": "={{ $json.photo }}"
+            },
+            {
+              "name": "server",
+              "value": "={{ $json.server }}"
+            },
+            {
+              "name": "hash",
+              "value": "={{ $json.hash }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "vk-save-photo",
+      "name": "VK Save Photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1790,
+        300
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "2",
+          "name": "VK API Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/wall.post",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.vkAccessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            },
+            {
+              "name": "owner_id",
+              "value": "={{ $credentials.vkGroupId }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $node['Download Image'].json.content }}"
+            },
+            {
+              "name": "attachments",
+              "value": "={{ 'photo' + $json.response[0].owner_id + '_' + $json.response[0].id }}"
+            },
+            {
+              "name": "from_group",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "vk-post-with-image",
+      "name": "VK Post with Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2010,
+        300
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "2",
+          "name": "VK API Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/polls.create",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.vkAccessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            },
+            {
+              "name": "question",
+              "value": "={{ $json.poll_question }}"
+            },
+            {
+              "name": "add_answers",
+              "value": "={{ JSON.stringify($json.poll_options.split('|')) }}"
+            },
+            {
+              "name": "owner_id",
+              "value": "={{ $credentials.vkGroupId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "vk-create-poll",
+      "name": "VK Create Poll",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1130,
+        500
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "2",
+          "name": "VK API Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/wall.post",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.vkAccessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            },
+            {
+              "name": "owner_id",
+              "value": "={{ $credentials.vkGroupId }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $node['If Poll Post'].json.content }}"
+            },
+            {
+              "name": "attachments",
+              "value": "={{ 'poll' + $json.response.owner_id + '_' + $json.response.id }}"
+            },
+            {
+              "name": "from_group",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "vk-post-with-poll",
+      "name": "VK Post with Poll",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1350,
+        500
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "2",
+          "name": "VK API Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $node['Read Posts from Google Sheets'].json.fileId }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "published": "true",
+            "published_at": "={{ new Date().toISOString() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "update-sheet-status",
+      "name": "Update Sheet Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        2230,
+        300
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## VK Auto Posting Workflow\n\nThis workflow automatically posts content to your VK group on a schedule.\n\n**Supported Content Types:**\n- Text posts\n- Image posts\n- Poll posts\n\n**Setup Required:**\n1. Configure VK API credentials\n2. Set up Google Sheets with post data\n3. Adjust schedule trigger as needed\n\n**Google Sheets Format:**\nColumns: post_date, post_type, content, image_url, poll_question, poll_options, published, published_at",
+        "height": 464.79532953301575,
+        "width": 389.0837696335078,
+        "color": 4
+      },
+      "id": "sticky-note",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -80
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Posts from Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Posts from Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Filter Posts Ready to Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Posts Ready to Publish": {
+      "main": [
+        [
+          {
+            "node": "If Text Post",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If Image Post",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If Poll Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Text Post": {
+      "main": [
+        [
+          {
+            "node": "VK Post Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Image Post": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Poll Post": {
+      "main": [
+        [
+          {
+            "node": "VK Create Poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VK Post Text": {
+      "main": [
+        [
+          {
+            "node": "Update Sheet Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "VK Get Upload Server",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VK Get Upload Server": {
+      "main": [
+        [
+          {
+            "node": "VK Upload Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VK Upload Image": {
+      "main": [
+        [
+          {
+            "node": "VK Save Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VK Save Photo": {
+      "main": [
+        [
+          {
+            "node": "VK Post with Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VK Post with Image": {
+      "main": [
+        [
+          {
+            "node": "Update Sheet Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VK Create Poll": {
+      "main": [
+        [
+          {
+            "node": "VK Post with Poll",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VK Post with Poll": {
+      "main": [
+        [
+          {
+            "node": "Update Sheet Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "instanceId": "your-instance-id"
+  },
+  "id": "vk-auto-posting",
+  "tags": []
+}
