@@ -1,0 +1,475 @@
+{
+  "name": "Customer Acquisition Email Campaign",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 480],
+      "notes": "Runs every Monday at 9:00 AM"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  u.id,\n  u.email,\n  u.first_name,\n  u.last_name,\n  up.interests,\n  up.preferred_language,\n  up.industry,\n  up.company_size,\n  up.job_role,\n  up.communication_frequency,\n  u.created_at,\n  u.last_activity_date\nFROM users u\nLEFT JOIN user_preferences up ON u.id = up.user_id\nWHERE u.status = 'lead'\n  AND u.email_verified = true\n  AND (u.unsubscribed = false OR u.unsubscribed IS NULL)\n  AND up.opt_in_marketing = true\nORDER BY u.created_at DESC\nLIMIT 1000;"
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "Get Leads with Preferences",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 390],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "PostgreSQL account"
+        }
+      },
+      "notes": "Fetch leads with their preferences for personalization"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition1",
+              "leftValue": "={{ $json.interests }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d4e5f6a7-b8c9-0123-def0-123456789013",
+      "name": "Filter Valid Leads",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [680, 390],
+      "notes": "Only process leads with preference data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst segmentedLeads = {\n  technology: [],\n  finance: [],\n  healthcare: [],\n  retail: [],\n  other: []\n};\n\nfor (const item of items) {\n  const industry = item.json.industry || 'other';\n  const segment = segmentedLeads[industry.toLowerCase()] || segmentedLeads.other;\n  \n  segment.push({\n    json: {\n      ...item.json,\n      segment: industry,\n      personalization: {\n        greeting: `${item.json.first_name || 'there'}`,\n        interests_list: item.json.interests ? item.json.interests.split(',').map(i => i.trim()) : [],\n        language: item.json.preferred_language || 'en',\n        industry_specific: true\n      }\n    }\n  });\n}\n\n// Flatten all segments into a single array\nconst output = [];\nfor (const segment in segmentedLeads) {\n  output.push(...segmentedLeads[segment]);\n}\n\nreturn output;"
+      },
+      "id": "e5f6a7b8-c9d0-1234-ef01-234567890124",
+      "name": "Segment by Industry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 390],
+      "notes": "Segment leads by industry and prepare personalization data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\nconst interests = item.personalization.interests_list;\nconst industry = item.segment.toLowerCase();\n\n// Email template selection logic\nlet templateId = 'general_acquisition';\nlet subject = '';\nlet preheader = '';\n\n// Industry-specific templates\nif (industry === 'technology') {\n  templateId = 'tech_acquisition';\n  subject = `${item.personalization.greeting}, Transform Your Tech Stack`;\n  preheader = 'Innovative solutions for modern tech companies';\n} else if (industry === 'finance') {\n  templateId = 'finance_acquisition';\n  subject = `${item.personalization.greeting}, Streamline Your Financial Operations`;\n  preheader = 'Secure and compliant solutions for financial services';\n} else if (industry === 'healthcare') {\n  templateId = 'healthcare_acquisition';\n  subject = `${item.personalization.greeting}, Improve Patient Care with Our Solutions`;\n  preheader = 'HIPAA-compliant tools for healthcare providers';\n} else if (industry === 'retail') {\n  templateId = 'retail_acquisition';\n  subject = `${item.personalization.greeting}, Boost Your Retail Sales`;\n  preheader = 'Customer engagement tools for retail success';\n} else {\n  subject = `${item.personalization.greeting}, Discover Solutions for Your Business`;\n  preheader = 'Tailored solutions for your industry';\n}\n\n// Interest-based content customization\nconst contentBlocks = [];\nif (interests.includes('automation')) {\n  contentBlocks.push('automation_benefits');\n}\nif (interests.includes('analytics')) {\n  contentBlocks.push('analytics_showcase');\n}\nif (interests.includes('integration')) {\n  contentBlocks.push('integration_features');\n}\nif (interests.includes('security')) {\n  contentBlocks.push('security_highlights');\n}\n\n// Default content if no specific interests\nif (contentBlocks.length === 0) {\n  contentBlocks.push('general_benefits', 'customer_testimonials');\n}\n\nreturn {\n  json: {\n    ...item,\n    email_config: {\n      template_id: templateId,\n      subject: subject,\n      preheader: preheader,\n      content_blocks: contentBlocks,\n      personalization_tokens: {\n        first_name: item.first_name,\n        company_size: item.company_size,\n        job_role: item.job_role,\n        interests: interests.join(', '),\n        industry: item.segment\n      }\n    }\n  }\n};"
+      },
+      "id": "f6a7b8c9-d0e1-2345-f012-345678901235",
+      "name": "Personalize Email Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 390],
+      "notes": "Create personalized email content based on preferences"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item.json;\nconst config = item.email_config;\nconst tokens = config.personalization_tokens;\n\n// Build HTML email content\nlet htmlContent = `\n<!DOCTYPE html>\n<html lang=\"${item.personalization.language}\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>${config.subject}</title>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }\n    .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }\n    .cta-button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }\n    .footer { background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }\n    .benefit-box { background: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #667eea; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>Welcome, ${tokens.first_name}!</h1>\n      <p>${config.preheader}</p>\n    </div>\n    <div class=\"content\">\n      <p>Hi ${tokens.first_name},</p>\n      <p>We noticed you're interested in <strong>${tokens.interests}</strong> for your ${tokens.industry} business. We have something special for you!</p>\n`;\n\n// Add content blocks based on interests\nif (config.content_blocks.includes('automation_benefits')) {\n  htmlContent += `\n      <div class=\"benefit-box\">\n        <h3>🚀 Automation That Works for You</h3>\n        <p>Save 10+ hours per week with our intelligent automation tools designed specifically for ${tokens.industry} professionals.</p>\n      </div>\n`;\n}\n\nif (config.content_blocks.includes('analytics_showcase')) {\n  htmlContent += `\n      <div class=\"benefit-box\">\n        <h3>📊 Data-Driven Insights</h3>\n        <p>Make smarter decisions with real-time analytics and customizable dashboards tailored to your needs.</p>\n      </div>\n`;\n}\n\nif (config.content_blocks.includes('integration_features')) {\n  htmlContent += `\n      <div class=\"benefit-box\">\n        <h3>🔗 Seamless Integrations</h3>\n        <p>Connect with 100+ tools you already use. No complex setup required.</p>\n      </div>\n`;\n}\n\nif (config.content_blocks.includes('security_highlights')) {\n  htmlContent += `\n      <div class=\"benefit-box\">\n        <h3>🔒 Enterprise-Grade Security</h3>\n        <p>Your data is protected with bank-level encryption and compliance certifications.</p>\n      </div>\n`;\n}\n\nif (config.content_blocks.includes('general_benefits')) {\n  htmlContent += `\n      <div class=\"benefit-box\">\n        <h3>✨ Why Choose Us?</h3>\n        <ul>\n          <li>Easy to use, no technical expertise required</li>\n          <li>24/7 customer support</li>\n          <li>Free trial with no credit card needed</li>\n          <li>ROI guaranteed within 90 days</li>\n        </ul>\n      </div>\n`;\n}\n\nif (config.content_blocks.includes('customer_testimonials')) {\n  htmlContent += `\n      <div class=\"benefit-box\">\n        <h3>💬 What Our Customers Say</h3>\n        <p><em>\"This solution transformed how we work. Highly recommended for ${tokens.industry} companies!\"</em></p>\n        <p><strong>- Sarah M., ${tokens.job_role}</strong></p>\n      </div>\n`;\n}\n\nhtmlContent += `\n      <p style=\"text-align: center;\">\n        <a href=\"https://yourcompany.com/signup?ref=email&industry=${tokens.industry}&utm_source=n8n&utm_medium=email&utm_campaign=acquisition\" class=\"cta-button\">Start Your Free Trial</a>\n      </p>\n      <p>No credit card required. Cancel anytime.</p>\n      <p>Best regards,<br>Your Customer Success Team</p>\n    </div>\n    <div class=\"footer\">\n      <p>You're receiving this email because you expressed interest in our services.</p>\n      <p><a href=\"https://yourcompany.com/unsubscribe?email=${item.email}\">Unsubscribe</a> | <a href=\"https://yourcompany.com/preferences?email=${item.email}\">Update Preferences</a></p>\n      <p>© 2026 Your Company. All rights reserved.</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\n// Plain text version\nconst textContent = `\nHi ${tokens.first_name},\n\nWe noticed you're interested in ${tokens.interests} for your ${tokens.industry} business.\n\nHere's what we can offer you:\n${config.content_blocks.map(block => `- ${block.replace('_', ' ')}`).join('\\n')}\n\nStart your free trial today: https://yourcompany.com/signup?ref=email&industry=${tokens.industry}\n\nNo credit card required. Cancel anytime.\n\nBest regards,\nYour Customer Success Team\n\n---\nUnsubscribe: https://yourcompany.com/unsubscribe?email=${item.email}\n`;\n\nreturn {\n  json: {\n    to: item.email,\n    subject: config.subject,\n    html: htmlContent,\n    text: textContent,\n    from: 'hello@yourcompany.com',\n    fromName: 'Your Company Team',\n    replyTo: 'support@yourcompany.com',\n    user_id: item.id,\n    campaign: 'customer_acquisition',\n    segment: item.segment,\n    template_id: config.template_id\n  }\n};"
+      },
+      "id": "a7b8c9d0-e1f2-3456-0123-456789012346",
+      "name": "Build Email HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 390],
+      "notes": "Generate final HTML and text email content"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "fromEmail": "={{ $json.from }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {
+          "fromName": "={{ $json.fromName }}",
+          "replyTo": "={{ $json.replyTo }}"
+        }
+      },
+      "id": "b8c9d0e1-f2a3-4567-1234-567890123457",
+      "name": "Send Email via SMTP",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1560, 280],
+      "credentials": {
+        "smtp": {
+          "id": "2",
+          "name": "SMTP account"
+        }
+      },
+      "notes": "Send via SMTP server"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "send",
+        "emailType": "html",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "replyTo": "={{ $json.replyTo }}"
+        }
+      },
+      "id": "c9d0e1f2-a3b4-5678-2345-678901234568",
+      "name": "Send Email via Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1560, 390],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "3",
+          "name": "Gmail OAuth2 account"
+        }
+      },
+      "notes": "Alternative: Send via Gmail API"
+    },
+    {
+      "parameters": {
+        "apiKey": "={{ $credentials.sendgridApi }}",
+        "fromEmail": "={{ $json.from }}",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {
+          "fromName": "={{ $json.fromName }}",
+          "replyTo": "={{ $json.replyTo }}"
+        }
+      },
+      "id": "d0e1f2a3-b4c5-6789-3456-789012345679",
+      "name": "Send Email via SendGrid",
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [1560, 500],
+      "credentials": {
+        "sendGridApi": {
+          "id": "4",
+          "name": "SendGrid account"
+        }
+      },
+      "notes": "Alternative: Send via SendGrid API"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO email_campaigns (user_id, campaign_name, email_subject, template_id, segment, sent_at, status)\nVALUES \n  ({{ $json.user_id }}, '{{ $json.campaign }}', '{{ $json.subject }}', '{{ $json.template_id }}', '{{ $json.segment }}', NOW(), 'sent')\nON CONFLICT (user_id, campaign_name, sent_at::date) \nDO UPDATE SET status = 'sent';"
+      },
+      "id": "e1f2a3b4-c5d6-7890-4567-890123456780",
+      "name": "Log Campaign Activity",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1780, 390],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "PostgreSQL account"
+        }
+      },
+      "notes": "Track sent emails for analytics"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "error_condition",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f2a3b4c5-d6e7-8901-5678-901234567891",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2000, 390],
+      "notes": "Error handling branch"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO email_errors (user_id, campaign_name, error_message, error_date)\nVALUES \n  ({{ $json.user_id }}, '{{ $json.campaign }}', '{{ $json.error }}', NOW());"
+      },
+      "id": "a3b4c5d6-e7f8-9012-6789-012345678902",
+      "name": "Log Errors",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2220, 280],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "PostgreSQL account"
+        }
+      },
+      "notes": "Log failed email attempts"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\n\nconst summary = {\n  total_processed: allItems.length,\n  successful: allItems.filter(item => !item.json.error).length,\n  failed: allItems.filter(item => item.json.error).length,\n  segments: {},\n  timestamp: new Date().toISOString()\n};\n\n// Count by segment\nfor (const item of allItems) {\n  const segment = item.json.segment || 'unknown';\n  if (!summary.segments[segment]) {\n    summary.segments[segment] = 0;\n  }\n  summary.segments[segment]++;\n}\n\nreturn [{ json: summary }];"
+      },
+      "id": "b4c5d6e7-f8a9-0123-7890-123456789013",
+      "name": "Generate Campaign Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 500],
+      "notes": "Create campaign performance summary"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "=📧 Customer Acquisition Campaign Complete!\n\nTotal Emails: {{ $json.total_processed }}\n✅ Successful: {{ $json.successful }}\n❌ Failed: {{ $json.failed }}\n\nSegments:\n{{ Object.entries($json.segments).map(([k,v]) => `- ${k}: ${v}`).join('\\n') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c5d6e7f8-a9b0-1234-8901-234567890124",
+      "name": "Send Slack Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2440, 500],
+      "notes": "Notify team about campaign completion"
+    }
+  ],
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Get Leads with Preferences",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Leads with Preferences",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Leads with Preferences": {
+      "main": [
+        [
+          {
+            "node": "Filter Valid Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Valid Leads": {
+      "main": [
+        [
+          {
+            "node": "Segment by Industry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Segment by Industry": {
+      "main": [
+        [
+          {
+            "node": "Personalize Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Personalize Email Content": {
+      "main": [
+        [
+          {
+            "node": "Build Email HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Email HTML": {
+      "main": [
+        [
+          {
+            "node": "Send Email via SMTP",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Email via Gmail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Email via SendGrid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email via SMTP": {
+      "main": [
+        [
+          {
+            "node": "Log Campaign Activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email via Gmail": {
+      "main": [
+        [
+          {
+            "node": "Log Campaign Activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email via SendGrid": {
+      "main": [
+        [
+          {
+            "node": "Log Campaign Activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Campaign Activity": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Log Errors",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Campaign Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Campaign Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Errors": {
+      "main": [
+        [
+          {
+            "node": "Generate Campaign Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Campaign Summary": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-10T00:00:00.000Z",
+  "versionId": "1"
+}
