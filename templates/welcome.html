@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Our Newsletter</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            margin: 20px auto;
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 50px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .welcome-icon {
+            font-size: 64px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 14px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome Aboard! 🎉</h1>
+        </div>
+        <div class="content">
+            <div class="welcome-icon">👋</div>
+            <h2 style="text-align: center; color: #667eea;">Hi {{ recipient_name }}!</h2>
+            <p style="text-align: center; font-size: 18px;">Thank you for subscribing to our newsletter.</p>
+            <p>We're thrilled to have you as part of our community! You'll now receive monthly updates with:</p>
+            <ul>
+                <li>Latest news and announcements</li>
+                <li>Exclusive content and resources</li>
+                <li>Tips and best practices</li>
+                <li>Special offers for subscribers</li>
+            </ul>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="#" class="cta-button">Get Started →</a>
+            </div>
+            <p>If you have any questions, feel free to reach out to us anytime.</p>
+            <p>Best regards,<br><strong>The Newsletter Team</strong></p>
+        </div>
+        <div class="footer">
+            <p>© {{ year }} Your Company Name. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

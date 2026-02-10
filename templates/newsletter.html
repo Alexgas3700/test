@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Newsletter</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            margin: 20px auto;
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #667eea;
+            font-size: 22px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        .section p {
+            margin-bottom: 15px;
+            color: #555;
+        }
+        .highlight-box {
+            background-color: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 14px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .social-links {
+            margin: 20px 0;
+        }
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #667eea;
+            text-decoration: none;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        ul li {
+            margin-bottom: 10px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📧 Monthly Newsletter</h1>
+            <p>{{ month }}</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p class="greeting">Hello {{ recipient_name }}! 👋</p>
+            
+            <p>Welcome to our monthly newsletter! We're excited to share the latest updates, insights, and news with you.</p>
+
+            <!-- Section 1: What's New -->
+            <div class="section">
+                <h2>🎉 What's New This Month</h2>
+                <p>Here are the highlights from {{ month }}:</p>
+                <ul>
+                    <li><strong>Feature Update:</strong> We've launched exciting new features to improve your experience</li>
+                    <li><strong>Community Growth:</strong> Our community continues to grow with amazing members like you</li>
+                    <li><strong>Content Release:</strong> Check out our latest blog posts and resources</li>
+                </ul>
+            </div>
+
+            <!-- Highlight Box -->
+            <div class="highlight-box">
+                <h3 style="margin-top: 0; color: #667eea;">💡 Featured Content</h3>
+                <p style="margin-bottom: 0;">Don't miss our most popular content this month. It's packed with valuable insights and practical tips you can use right away.</p>
+            </div>
+
+            <!-- Section 2: Resources -->
+            <div class="section">
+                <h2>📚 Resources & Tips</h2>
+                <p>We've curated some valuable resources for you:</p>
+                <ul>
+                    <li>Expert tips and best practices</li>
+                    <li>Step-by-step guides and tutorials</li>
+                    <li>Industry insights and trends</li>
+                </ul>
+            </div>
+
+            <!-- Call to Action -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="#" class="cta-button">Explore More →</a>
+            </div>
+
+            <!-- Section 3: Coming Up -->
+            <div class="section">
+                <h2>🔮 Coming Up Next</h2>
+                <p>Here's what you can look forward to:</p>
+                <ul>
+                    <li>Upcoming events and webinars</li>
+                    <li>New feature releases</li>
+                    <li>Exclusive content for subscribers</li>
+                </ul>
+            </div>
+
+            <p style="margin-top: 30px;">Thank you for being part of our community! We appreciate your continued support.</p>
+            
+            <p>Best regards,<br>
+            <strong>The Newsletter Team</strong></p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="social-links">
+                <a href="#">Twitter</a> |
+                <a href="#">LinkedIn</a> |
+                <a href="#">Facebook</a> |
+                <a href="#">Instagram</a>
+            </div>
+            
+            <p>You're receiving this email because you subscribed to our newsletter.</p>
+            
+            <p style="margin-top: 15px;">
+                <a href="#">Unsubscribe</a> | 
+                <a href="#">Update Preferences</a> | 
+                <a href="#">View in Browser</a>
+            </p>
+            
+            <p style="margin-top: 15px; font-size: 12px; color: #999;">
+                © {{ year }} Your Company Name. All rights reserved.<br>
+                123 Newsletter Street, City, State 12345
+            </p>
+        </div>
+    </div>
+</body>
+</html>
