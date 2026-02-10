@@ -1,0 +1,169 @@
+{
+  "name": "VK Post with Images Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c8f5e5e5-5e5e-5e5e-5e5e-5e5e5e5e5e5e",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "postText",
+              "value": "Hello from n8n! This is a test post with image."
+            },
+            {
+              "name": "imageUrl",
+              "value": "https://example.com/image.jpg"
+            },
+            {
+              "name": "groupId",
+              "value": "YOUR_GROUP_ID"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Set Post Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.imageUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "photo",
+        "operation": "upload",
+        "groupId": "={{ $('Set Post Data').item.json.groupId }}",
+        "binaryProperty": "data"
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "Upload Photo to VK",
+      "type": "n8n-nodes-base.vk",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "vkOAuth2Api": {
+          "id": "1",
+          "name": "VK OAuth2 account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "post",
+        "operation": "create",
+        "groupId": "={{ $('Set Post Data').item.json.groupId }}",
+        "message": "={{ $('Set Post Data').item.json.postText }}",
+        "additionalFields": {
+          "attachments": "={{ $json.id }}"
+        }
+      },
+      "id": "d4e5f6a7-b8c9-0123-def1-234567890123",
+      "name": "Create VK Post",
+      "type": "n8n-nodes-base.vk",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ],
+      "credentials": {
+        "vkOAuth2Api": {
+          "id": "1",
+          "name": "VK OAuth2 account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Set Post Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Post Data": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Upload Photo to VK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Photo to VK": {
+      "main": [
+        [
+          {
+            "node": "Create VK Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-10T00:00:00.000Z",
+  "versionId": "1"
+}

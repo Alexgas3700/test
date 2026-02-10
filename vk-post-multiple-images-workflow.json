@@ -1,0 +1,291 @@
+{
+  "name": "VK Post with Multiple Images Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "postText",
+              "value": "Check out these amazing images! 📸"
+            },
+            {
+              "name": "groupId",
+              "value": "YOUR_GROUP_ID"
+            }
+          ],
+          "array": [
+            {
+              "name": "imageUrls",
+              "value": "=[\n  \"https://picsum.photos/800/600?random=1\",\n  \"https://picsum.photos/800/600?random=2\",\n  \"https://picsum.photos/800/600?random=3\"\n]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-data-001",
+      "name": "Set Post Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "split-001",
+              "name": "imageUrl",
+              "value": "={{ $json.imageUrls }}",
+              "type": "string"
+            },
+            {
+              "id": "split-002",
+              "name": "groupId",
+              "value": "={{ $json.groupId }}",
+              "type": "string"
+            },
+            {
+              "id": "split-003",
+              "name": "postText",
+              "value": "={{ $json.postText }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "edit-fields-001",
+      "name": "Prepare for Split",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "imageUrl",
+        "options": {}
+      },
+      "id": "split-batch-001",
+      "name": "Split Images",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.imageUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "http-001",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "photo",
+        "operation": "upload",
+        "groupId": "={{ $json.groupId }}",
+        "binaryProperty": "data"
+      },
+      "id": "vk-upload-001",
+      "name": "Upload Photo to VK",
+      "type": "n8n-nodes-base.vk",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        300
+      ],
+      "credentials": {
+        "vkOAuth2Api": {
+          "id": "1",
+          "name": "VK OAuth2 account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "aggregate-001",
+      "name": "Aggregate Photos",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all photo IDs and format them for VK API\nconst items = $input.all();\nconst photoIds = items.map(item => item.json.id);\nconst attachments = photoIds.join(',');\n\n// Get post data from first item\nconst postText = items[0].json.postText;\nconst groupId = items[0].json.groupId;\n\nreturn {\n  postText,\n  groupId,\n  attachments,\n  photoCount: photoIds.length\n};"
+      },
+      "id": "code-001",
+      "name": "Format Attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "post",
+        "operation": "create",
+        "groupId": "={{ $json.groupId }}",
+        "message": "={{ $json.postText }}",
+        "additionalFields": {
+          "attachments": "={{ $json.attachments }}"
+        }
+      },
+      "id": "vk-post-001",
+      "name": "Create VK Post",
+      "type": "n8n-nodes-base.vk",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        300
+      ],
+      "credentials": {
+        "vkOAuth2Api": {
+          "id": "1",
+          "name": "VK OAuth2 account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Post Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Post Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare for Split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare for Split": {
+      "main": [
+        [
+          {
+            "node": "Split Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Images": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Upload Photo to VK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Photo to VK": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Photos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Photos": {
+      "main": [
+        [
+          {
+            "node": "Format Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Attachments": {
+      "main": [
+        [
+          {
+            "node": "Create VK Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-10T00:00:00.000Z",
+  "versionId": "1"
+}
