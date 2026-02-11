@@ -1,0 +1,597 @@
+{
+  "name": "VK Post Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.webhook_url || 'https://your-api.com/posts' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-posts",
+      "name": "Fetch Posts from Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        470,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1",
+          "name": "API Header Auth"
+        }
+      },
+      "notes": "Fetch posts from your content source (API, database, etc.)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "condition-2",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "filter-post-types",
+      "name": "Filter Post Types",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ],
+      "notes": "Only process text and image posts"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-image",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-if-image",
+      "name": "Check if Image Post",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        910,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.image_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-image",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1130,
+        200
+      ],
+      "notes": "Download image from URL for VK upload"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "wall",
+        "operation": "post",
+        "groupId": "={{ $json.vk_group_id || $env.VK_GROUP_ID }}",
+        "message": "={{ $json.content || $json.text }}",
+        "attachments": "={{ $json.attachments || '' }}",
+        "additionalFields": {
+          "from_group": true,
+          "signed": false
+        }
+      },
+      "id": "post-to-vk-with-image",
+      "name": "Post to VK (with Image)",
+      "type": "n8n-nodes-base.vk",
+      "typeVersion": 1,
+      "position": [
+        1350,
+        200
+      ],
+      "credentials": {
+        "vkOAuth2Api": {
+          "id": "2",
+          "name": "VK OAuth2"
+        }
+      },
+      "notes": "Post with image attachment to VK"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "wall",
+        "operation": "post",
+        "groupId": "={{ $json.vk_group_id || $env.VK_GROUP_ID }}",
+        "message": "={{ $json.content || $json.text }}",
+        "additionalFields": {
+          "from_group": true,
+          "signed": false
+        }
+      },
+      "id": "post-to-vk-text-only",
+      "name": "Post to VK (Text Only)",
+      "type": "n8n-nodes-base.vk",
+      "typeVersion": 1,
+      "position": [
+        1130,
+        400
+      ],
+      "credentials": {
+        "vkOAuth2Api": {
+          "id": "2",
+          "name": "VK OAuth2"
+        }
+      },
+      "notes": "Post text only to VK"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/photos.getWallUploadServer",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "group_id",
+              "value": "={{ $json.vk_group_id || $env.VK_GROUP_ID }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.accessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-upload-server",
+      "name": "Get VK Upload Server",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1350,
+        100
+      ],
+      "credentials": {
+        "vkOAuth2Api": {
+          "id": "2",
+          "name": "VK OAuth2"
+        }
+      },
+      "notes": "Get upload server URL for image"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.response.upload_url }}",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "photo",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "upload-image",
+      "name": "Upload Image to VK",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1570,
+        100
+      ],
+      "notes": "Upload image to VK server"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vk.com/method/photos.saveWallPhoto",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "group_id",
+              "value": "={{ $json.vk_group_id || $env.VK_GROUP_ID }}"
+            },
+            {
+              "name": "photo",
+              "value": "={{ $json.photo }}"
+            },
+            {
+              "name": "server",
+              "value": "={{ $json.server }}"
+            },
+            {
+              "name": "hash",
+              "value": "={{ $json.hash }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.accessToken }}"
+            },
+            {
+              "name": "v",
+              "value": "5.131"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-wall-photo",
+      "name": "Save Wall Photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1790,
+        100
+      ],
+      "credentials": {
+        "vkOAuth2Api": {
+          "id": "2",
+          "name": "VK OAuth2"
+        }
+      },
+      "notes": "Save uploaded photo to wall"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format attachment string for VK\nconst response = $input.first().json.response;\nif (response && response.length > 0) {\n  const photo = response[0];\n  const attachment = `photo${photo.owner_id}_${photo.id}`;\n  return {\n    json: {\n      ...items[0].json,\n      attachments: attachment\n    }\n  };\n}\nreturn items;"
+      },
+      "id": "format-attachment",
+      "name": "Format Attachment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2010,
+        100
+      ],
+      "notes": "Format photo attachment for VK post"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-data",
+      "name": "Merge Post Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        2230,
+        200
+      ],
+      "notes": "Merge original post data with attachment"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "wall",
+        "operation": "post",
+        "groupId": "={{ $json.vk_group_id || $env.VK_GROUP_ID }}",
+        "message": "={{ $json.content || $json.text }}",
+        "attachments": "={{ $json.attachments }}",
+        "additionalFields": {
+          "from_group": true,
+          "signed": false
+        }
+      },
+      "id": "post-to-vk-final",
+      "name": "Post to VK (Final)",
+      "type": "n8n-nodes-base.vk",
+      "typeVersion": 1,
+      "position": [
+        2450,
+        200
+      ],
+      "credentials": {
+        "vkOAuth2Api": {
+          "id": "2",
+          "name": "VK OAuth2"
+        }
+      },
+      "notes": "Final post with image to VK"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-results",
+      "name": "Merge All Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        2670,
+        300
+      ],
+      "notes": "Combine all posted results"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log successful posts\nconst results = [];\nfor (const item of items) {\n  results.push({\n    json: {\n      status: 'success',\n      post_id: item.json.post_id || item.json.id,\n      type: item.json.type || 'text',\n      timestamp: new Date().toISOString(),\n      message: 'Post published successfully to VK'\n    }\n  });\n}\nreturn results;"
+      },
+      "id": "log-results",
+      "name": "Log Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2890,
+        300
+      ],
+      "notes": "Log posting results"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Posts from Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Posts from Source": {
+      "main": [
+        [
+          {
+            "node": "Filter Post Types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Post Types": {
+      "main": [
+        [
+          {
+            "node": "Check if Image Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Image Post": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post to VK (Text Only)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Get VK Upload Server",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get VK Upload Server": {
+      "main": [
+        [
+          {
+            "node": "Upload Image to VK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Image to VK": {
+      "main": [
+        [
+          {
+            "node": "Save Wall Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Wall Photo": {
+      "main": [
+        [
+          {
+            "node": "Format Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Attachment": {
+      "main": [
+        [
+          {
+            "node": "Merge Post Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Post Data": {
+      "main": [
+        [
+          {
+            "node": "Post to VK (Final)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to VK (Final)": {
+      "main": [
+        [
+          {
+            "node": "Merge All Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to VK (Text Only)": {
+      "main": [
+        [
+          {
+            "node": "Merge All Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge All Results": {
+      "main": [
+        [
+          {
+            "node": "Log Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2026-02-11T09:00:00.000Z",
+      "updatedAt": "2026-02-11T09:00:00.000Z",
+      "id": "1",
+      "name": "social-media"
+    },
+    {
+      "createdAt": "2026-02-11T09:00:00.000Z",
+      "updatedAt": "2026-02-11T09:00:00.000Z",
+      "id": "2",
+      "name": "vk"
+    },
+    {
+      "createdAt": "2026-02-11T09:00:00.000Z",
+      "updatedAt": "2026-02-11T09:00:00.000Z",
+      "id": "3",
+      "name": "automation"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2026-02-11T09:00:00.000Z",
+  "versionId": "1"
+}
