@@ -1,0 +1,34 @@
+# n8n specific
+.n8n/
+node_modules/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Credentials (never commit!)
+credentials.json
+*-credentials.json
+
+# Backups
+backup/
+*.backup
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporary files
+tmp/
+temp/
+*.tmp

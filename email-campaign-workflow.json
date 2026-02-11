@@ -1,0 +1,446 @@
+{
+  "name": "Email Campaign Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c7e1c3b5-8f2a-4d3e-9a1b-2c3d4e5f6a7b",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAllRows",
+        "sheetId": "={{ $json.sheetId }}",
+        "range": "A:E",
+        "options": {}
+      },
+      "id": "d8e2c4b6-9f3a-5d4e-0a2b-3c4d5e6f7a8c",
+      "name": "Get Email List",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Получает список контактов из Google Sheets с колонками: Email, Name, Company, Status, Last Contact"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.Status }}",
+              "operation": "equals",
+              "value2": "Active"
+            }
+          ]
+        }
+      },
+      "id": "e9f3c5b7-0f4a-6d5e-1a3b-4c5d6e7f8a9d",
+      "name": "Filter Active Contacts",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ],
+      "notes": "Фильтрует только активные контакты для рассылки"
+    },
+    {
+      "parameters": {
+        "functionCode": "const items = [];\n\nfor (const item of $input.all()) {\n  const email = item.json.Email;\n  const name = item.json.Name || 'Valued Customer';\n  const company = item.json.Company || '';\n  \n  // Персонализация темы письма\n  const subject = `Специальное предложение для ${company || name}`;\n  \n  // Персонализация тела письма\n  const body = `\n    <html>\n      <head>\n        <style>\n          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n          .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n          .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }\n          .content { padding: 20px; background-color: #f9f9f9; }\n          .button { display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; }\n          .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }\n        </style>\n      </head>\n      <body>\n        <div class=\"container\">\n          <div class=\"header\">\n            <h1>Здравствуйте, ${name}!</h1>\n          </div>\n          <div class=\"content\">\n            <p>Мы рады представить вам наше специальное предложение${company ? ' для ' + company : ''}.</p>\n            <p>В рамках нашей новой кампании мы предлагаем:</p>\n            <ul>\n              <li>Скидка 20% на все услуги</li>\n              <li>Бесплатная консультация</li>\n              <li>Приоритетная поддержка</li>\n            </ul>\n            <p>Это предложение действительно только до конца месяца!</p>\n            <a href=\"https://example.com/offer?email=${encodeURIComponent(email)}\" class=\"button\">Узнать больше</a>\n          </div>\n          <div class=\"footer\">\n            <p>Если вы хотите отписаться от рассылки, <a href=\"https://example.com/unsubscribe?email=${encodeURIComponent(email)}\">нажмите здесь</a></p>\n            <p>&copy; 2026 Ваша Компания. Все права защищены.</p>\n          </div>\n        </div>\n      </body>\n    </html>\n  `;\n  \n  items.push({\n    json: {\n      email: email,\n      name: name,\n      company: company,\n      subject: subject,\n      body: body,\n      originalData: item.json\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "f0g4c6b8-1f5a-7d6e-2a4b-5c6d7e8f9a0e",
+      "name": "Personalize Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        200
+      ],
+      "notes": "Создает персонализированные письма для каждого контакта"
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {
+          "reset": false
+        }
+      },
+      "id": "a1h5c7b9-2f6a-8d7e-3a5b-6c7d8e9f0a1f",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1120,
+        200
+      ],
+      "notes": "Разделяет рассылку на партии по 10 писем для предотвращения блокировки"
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "id": "b2i6c8b0-3f7a-9d8e-4a6b-7c8d9e0f1a2g",
+      "name": "Wait Between Batches",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        200
+      ],
+      "notes": "Пауза между партиями писем (5 секунд)"
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@yourcompany.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.body }}",
+        "options": {
+          "allowUnauthorizedCerts": false,
+          "appendAttribution": false
+        }
+      },
+      "id": "c3j7c9b1-4f8a-0d9e-5a7b-8c9d0e1f2a3h",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        200
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "2",
+          "name": "SMTP account"
+        }
+      },
+      "notes": "Отправляет персонализированное письмо через SMTP"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Логирование успешной отправки\nconst timestamp = new Date().toISOString();\nconst email = $json.email;\nconst name = $json.name;\n\nreturn {\n  json: {\n    timestamp: timestamp,\n    email: email,\n    name: name,\n    status: 'sent',\n    message: `Email successfully sent to ${name} (${email})`\n  }\n};"
+      },
+      "id": "d4k8c0b2-5f9a-1d0e-6a8b-9c0d1e2f3a4i",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        200
+      ],
+      "notes": "Логирует успешную отправку письма"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "sheetId": "={{ $json.originalData.sheetId }}",
+        "range": "F:G",
+        "options": {
+          "valueInputMode": "USER_ENTERED"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Last Email Sent": "={{ $json.timestamp }}",
+            "Email Status": "={{ $json.status }}"
+          }
+        }
+      },
+      "id": "e5l9c1b3-6f0a-2d1e-7a9b-0c1d2e3f4a5j",
+      "name": "Update Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2000,
+        200
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Обновляет Google Sheets с информацией об отправке"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Обработка ошибки отправки\nconst timestamp = new Date().toISOString();\nconst email = $json.email || 'unknown';\nconst error = $json.error || 'Unknown error';\n\nreturn {\n  json: {\n    timestamp: timestamp,\n    email: email,\n    status: 'failed',\n    error: error,\n    message: `Failed to send email to ${email}: ${error}`\n  }\n};"
+      },
+      "id": "f6m0c2b4-7f1a-3d2e-8a0b-1c2d3e4f5a6k",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        400
+      ],
+      "notes": "Логирует ошибки при отправке"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "sheetId": "={{ $json.sheetId }}",
+        "range": "H:I",
+        "options": {},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Error Timestamp": "={{ $json.timestamp }}",
+            "Error Message": "={{ $json.error }}"
+          }
+        }
+      },
+      "id": "g7n1c3b5-8f2a-4d3e-9a1b-2c3d4e5f6a7l",
+      "name": "Log Error to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2000,
+        400
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Записывает ошибки в Google Sheets"
+    },
+    {
+      "parameters": {},
+      "id": "h8o2c4b6-9f3a-5d4e-0a2b-3c4d5e6f7a8m",
+      "name": "No Active Contacts",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        400
+      ],
+      "notes": "Обработка случая, когда нет активных контактов"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Сводная статистика по рассылке\nconst allItems = $input.all();\nconst totalSent = allItems.filter(item => item.json.status === 'sent').length;\nconst totalFailed = allItems.filter(item => item.json.status === 'failed').length;\nconst totalProcessed = totalSent + totalFailed;\n\nconst summary = {\n  campaignDate: new Date().toISOString(),\n  totalProcessed: totalProcessed,\n  successfullySent: totalSent,\n  failed: totalFailed,\n  successRate: totalProcessed > 0 ? ((totalSent / totalProcessed) * 100).toFixed(2) + '%' : '0%'\n};\n\nreturn {\n  json: summary\n};"
+      },
+      "id": "i9p3c5b7-0f4a-6d5e-1a3b-4c5d6e7f8a9n",
+      "name": "Campaign Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        200
+      ],
+      "notes": "Создает сводку по результатам кампании"
+    },
+    {
+      "parameters": {
+        "fromEmail": "reports@yourcompany.com",
+        "toEmail": "admin@yourcompany.com",
+        "subject": "Email Campaign Report - {{ $json.campaignDate }}",
+        "emailType": "html",
+        "message": "=<html>\n  <body>\n    <h2>Email Campaign Summary</h2>\n    <p><strong>Campaign Date:</strong> {{ $json.campaignDate }}</p>\n    <p><strong>Total Processed:</strong> {{ $json.totalProcessed }}</p>\n    <p><strong>Successfully Sent:</strong> {{ $json.successfullySent }}</p>\n    <p><strong>Failed:</strong> {{ $json.failed }}</p>\n    <p><strong>Success Rate:</strong> {{ $json.successRate }}</p>\n  </body>\n</html>",
+        "options": {}
+      },
+      "id": "j0q4c6b8-1f5a-7d6e-2a4b-5c6d7e8f9a0o",
+      "name": "Send Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        2440,
+        200
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "2",
+          "name": "SMTP account"
+        }
+      },
+      "notes": "Отправляет отчет о кампании администратору"
+    }
+  ],
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          {
+            "node": "Get Email List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Email List": {
+      "main": [
+        [
+          {
+            "node": "Filter Active Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Active Contacts": {
+      "main": [
+        [
+          {
+            "node": "Personalize Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Active Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Personalize Emails": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Wait Between Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Between Batches": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": [
+        [
+          {
+            "node": "Update Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Campaign Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Campaign Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Campaign Summary": {
+      "main": [
+        [
+          {
+            "node": "Send Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2026-02-11T00:00:00.000Z",
+      "updatedAt": "2026-02-11T00:00:00.000Z",
+      "id": "1",
+      "name": "Email Marketing"
+    },
+    {
+      "createdAt": "2026-02-11T00:00:00.000Z",
+      "updatedAt": "2026-02-11T00:00:00.000Z",
+      "id": "2",
+      "name": "Automation"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-11T00:00:00.000Z",
+  "versionId": "1"
+}

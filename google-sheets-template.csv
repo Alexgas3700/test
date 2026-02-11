@@ -1,0 +1,11 @@
+Email,Name,Company,Status,Last Contact,Last Email Sent,Email Status,Error Timestamp,Error Message
+john.doe@example.com,John Doe,Acme Corporation,Active,2026-01-15,,,
+jane.smith@techcorp.com,Jane Smith,TechCorp Inc,Active,2026-01-20,,,
+bob.johnson@startup.io,Bob Johnson,StartUp LLC,Inactive,2025-12-10,,,
+alice.williams@enterprise.com,Alice Williams,Enterprise Solutions,Active,2026-02-01,,,
+charlie.brown@consulting.com,Charlie Brown,Brown Consulting,Active,2026-01-25,,,
+diana.prince@agency.com,Diana Prince,Creative Agency,Active,2026-02-05,,,
+edward.norton@finance.com,Edward Norton,Finance Group,Inactive,2025-11-15,,,
+fiona.apple@marketing.com,Fiona Apple,Marketing Pro,Active,2026-01-30,,,
+george.lucas@media.com,George Lucas,Media Company,Active,2026-02-08,,,
+helen.mirren@retail.com,Helen Mirren,Retail Solutions,Active,2026-02-03,,,
