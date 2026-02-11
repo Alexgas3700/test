@@ -1,0 +1,16 @@
+{
+  "name": "cursor-test",
+  "version": "1.0.0",
+  "description": "Test for Cursor launch without specific field",
+  "status": "active",
+  "configuration": {
+    "enableAutoComplete": true,
+    "enableSyntaxHighlighting": true,
+    "theme": "default"
+  },
+  "metadata": {
+    "created": "2026-02-11",
+    "lastModified": "2026-02-11",
+    "author": "Cursor Agent"
+  }
+}
